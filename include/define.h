@@ -48,6 +48,7 @@ typedef struct {
     struct Bloc* next; //pointeur vers le bloc suivant
 }Bloc;
 
+//structure de données pour la blockchain
 typedef struct{
     Bloc* head; //pointeur vers le premier bloc de la blockchain (genesis block)
     int length; //nombre de blocs dans la blockchain
