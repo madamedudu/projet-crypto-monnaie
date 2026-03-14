@@ -9,7 +9,7 @@ OBJ_DIR = obj
 
 # Nom de l'exécutable final
 EXEC = bitthune
-NOM_ETU = Rendu_BitThune_Phase1_Chirine_Lassaoui
+NOM_ETU = Rendu_Chirine_Maeva_Katarzyna_Zyad_Phase1
 
 # Liste des fichiers sources de la phase 1
 SOURCES = $(SRC_DIR)/main.c \
