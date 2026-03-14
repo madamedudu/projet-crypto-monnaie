@@ -14,7 +14,7 @@ NOM_ETU = Rendu_Chirine_Maeva_Katarzyna_Zyad_Phase1
 # Liste des fichiers sources de la phase 1
 SOURCES = $(SRC_DIR)/main.c \
           $(SRC_DIR)/blockchain.c \
-          $(SRC_DIR)/block.c \
+          $(SRC_DIR)/bloc.c \
           $(SRC_DIR)/transaction.c \
           $(SRC_DIR)/utils.c \
           $(SRC_DIR)/sha256.c \
@@ -23,7 +23,7 @@ SOURCES = $(SRC_DIR)/main.c \
 # Liste des fichiers objets correspondants
 OBJECTS = $(OBJ_DIR)/main.o \
           $(OBJ_DIR)/blockchain.o \
-          $(OBJ_DIR)/block.o \
+          $(OBJ_DIR)/bloc.o \
           $(OBJ_DIR)/transaction.o \
           $(OBJ_DIR)/utils.o \
           $(OBJ_DIR)/sha256.o \
