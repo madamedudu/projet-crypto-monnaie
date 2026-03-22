@@ -56,3 +56,42 @@ void mine_block(Block *bloc, int difficulty) {
         }
     }
 }
+
+
+Block * create_genesis_block(){
+
+    //--- allocation du memoire pour le bloc ---
+    Block * genesis = malloc(sizeof(Block));
+    if(genesis == NULL){
+        perror("allocation du block");
+        return NULL;
+    }
+
+    //--- initialisation du hash a 0 car c'est le bloc genesis (format hexadécimal) ---
+    //memset(adresse, valeur, taille) on force la 'valeur' a l'@ 'adresse' de taille 'taille'
+    /* a la place de memset on peut faire la boucle, mais c'est plus longue
+    for (int i = 0; i < HASH_SIZE; i++) {
+    genesis->previousHash.HashValue[i] = 0;
+    }
+    */
+    memset(genesis->previousHash, '0', HASHLENGTH - 1);
+    genesis->previousHash[HASHLENGTH - 1] = '\0';
+
+    //--- pas de transactions ---
+    memset(genesis->merkleTree, '0', HASHLENGTH - 1);
+    genesis->merkleTree[HASHLENGTH - 1] = '\0';
+
+    //--- initialisation des autres parametres ---
+    genesis->timestamp = time(NULL); //renvoi le temps en secondes
+    genesis->nbTx = 0; //nbr des transactions
+    genesis->transactions = NULL; //liste de transactions
+    genesis->nonce = 0;
+    
+    strncpy(genesis->minerName, "System-Coinbase", MAX_STRING);  //car c'est le genesis
+    strncpy(genesis->comment, "Genesis Block - Welcome", MAX_STRING);
+
+    //--- on mine le bloc pour remplir le hash ---
+    mine_block(genesis, DIFFICULTY);
+
+    return genesis;
+}
