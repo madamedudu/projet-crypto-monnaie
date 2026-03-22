@@ -24,16 +24,20 @@
 #define FEE_RATE 5 //%
 #define HALVING 10 // nombre de blocs pour diviser la récompence
 #define HASHLENGTH SHA256_BLOCK_SIZE*2 + 1
-#define ADRESS_SIZE 50
+
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
+//Modification eleve
+#define ADRESS_SIZE 50
+
 
 // structure générique de liste non typée (à typer à l'utilisation)
 typedef struct Slist {
 	void * info; // les elt sont des blocks ou des transactions, ce qu'on veut en fait
 	struct Slist *next;
 } Slist;
+
 
 // structure de bloc
 typedef struct block {
@@ -97,6 +101,9 @@ typedef struct account {
 	BYTE pub_key[SHA256_BLOCK_SIZE*4 + 1]; // (parties 2 et 3)
   long balance; // solde du compte
 } Account;
+
+
+//Modification eleve
 
 //Structure de données pour un utilisateur
 typedef struct {
