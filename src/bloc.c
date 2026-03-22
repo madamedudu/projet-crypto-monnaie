@@ -5,6 +5,8 @@
 #include "define.h"
 #include "sha256_utils.h"
 
+
+//--- mining (hash) ---
 void mine_block(Block *bloc, int difficulty) {
 
     char buffer[MAX_BUF]; // pour concatener les donnees du bloc
@@ -58,6 +60,7 @@ void mine_block(Block *bloc, int difficulty) {
 }
 
 
+//--- creation du block genesis ---
 Block * create_genesis_block(){
 
     //--- allocation du memoire pour le bloc ---
@@ -94,4 +97,34 @@ Block * create_genesis_block(){
     mine_block(genesis, DIFFICULTY);
 
     return genesis;
+}
+
+//--- initialisation struct Blockchain ---
+Blockchain * init_blockchain() {
+
+    //--- allocation du blockchain ---
+    Blockchain *blockchain = (Blockchain *)malloc(sizeof(Blockchain));
+    if (blockchain == NULL){
+        perror("allocation du blockchain");
+        return NULL;
+    }
+
+    blockchain->difficulty = DIFFICULTY;
+    blockchain->reward4mining = INITIALREWARD; // Défini dans defines.h
+
+    //--- creation du bloc Genesis ---
+    Block *genesis = create_genesis_block();
+    
+    //--- creation du premier block de la liste Slist
+    Slist *element = (Slist *)malloc(sizeof(Slist));
+
+    if (element != NULL && genesis != NULL) {
+        element->info = (void *)genesis; // On stocke le bloc dans 'info'
+        element->next = NULL;
+        
+        blockchain->blocklist = element; 
+        blockchain->nbBlocks = 1;
+    }
+
+    return blockchain;
 }
