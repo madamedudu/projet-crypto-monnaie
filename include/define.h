@@ -31,8 +31,8 @@ typedef struct {
 
 //Structure de données pour un utilisateur
 typedef struct {
-    char adress[ADRESS_SIZE];  //identifiant de l'utilisateur
-    double balance; //c'est la solde du compte de l'utilisateur
+    char adresse[ADRESS_SIZE];  //identifiant de l'utilisateur
+    double solde; //c'est la solde du compte (wallet) de l'utilisateur
 } User;
 
 
