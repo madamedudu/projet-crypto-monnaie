@@ -34,7 +34,7 @@ void mine_block(Block *bloc, int difficulty) {
     while (!success) { //"tant que on a pas trouver un bon hash"
 
         //--- créer une chaîne avec les infos du bloc + le Nonce actuel ---
-        ssprintf(buffer, "%d%s%ld%s%ld", 
+        sprintf(buffer, "%d%s%ld%s%ld", 
                 bloc->index,
                 (char*)bloc->previousHash, 
                 (long)bloc->timestamp, 
@@ -127,4 +127,26 @@ Blockchain * init_blockchain() {
     }
 
     return blockchain;
+}
+
+
+//--- initialisation de la monnaie (struct currency_t) ---
+currency_t * init_currency() {
+
+    //--- allocation struct currency ---
+    currency_t * currency = (currency_t *)malloc(sizeof(currency_t));
+    if (currency == NULL){
+        perror("allocation currency");
+        return NULL;
+    }
+
+    //yayy = le nom a changer
+    strncpy(currency->currency_name, "yayy", MAX_STRING);
+    currency->moneySupply = 0; // Sera mis à jour lors de l'helicopter money
+    
+    //--- initialisation du blockchain ---
+    currency->bc = init_blockchain();
+
+    printf("Monnaie '%s' initialisée avec succès.\n", currency->currency_name);
+    return currency;
 }
