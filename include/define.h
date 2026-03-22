@@ -29,6 +29,13 @@ typedef struct {
 } Transaction;
 
 
+//Structure de données pour un utilisateur
+typedef struct {
+    char adresse[ADRESS_SIZE];  //identifiant de l'utilisateur
+    double solde; //c'est la solde du compte (wallet) de l'utilisateur
+} User;
+
+
 //structure de données pour un bloc
 typedef struct {
     Hash previousHash; //hash du bloc précédent
