@@ -4,10 +4,31 @@
 #include "transaction.h"
 #include "define.h"
 
-void generer_user(User *user, int nombre){
-    for(int i=0; i<nombre; i++){
-        snprintf(user[i].adresse, ADRESS_SIZE, "USER_%d", i); //on remplit le champ adresse avec le numéro i (id)
-        user[i].solde = 0.0; //au début le solde d'un user est à 0
+ListeUsers generer_users(int nombre) {
+    ListeUsers liste;
+
+    if(nombre <= 0 || nombre > MAX_USERS) {
+        printf("Le nombre n'est pas valide\n");
+        liste.users = NULL;
+        liste.nb_users = 0;
+        return liste;
     }
-}
+
+    liste.users = malloc(nombre * sizeof(User));
+    if (liste.users == NULL) {
+        printf("Erreur allocation mémoire\n");
+        liste.nb_users = 0;
+        return liste;
+    }
+
+    liste.nb_users = nombre;
+
+    //pour chaque utilisateur, on lui donne un identifiant et on initialise son solde à 0
+    for (int i = 0; i < nombre; i++) {
+        snprintf(liste.users[i].adresse, 50, "USER_%d", i + 1);
+        liste.users[i].solde = 0;
+    }
+
+    return liste;
+} 
 
