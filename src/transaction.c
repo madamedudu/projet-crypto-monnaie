@@ -74,5 +74,30 @@ Transaction create_helicopter_transaction(char *dest_address) {
 }
 
 
-
+/**
+ * phase globale d'Helicopter Money
+ * Utilise la ListeUsers (ListeUsers generer_users(int nombre)) et met à jour la masse monétaire.
+ */
+void run_helicopter_money(ListeUsers *liste, currency_t *currency) {
+    printf(" Lancement : Helicopter Money\n");
+    
+    // on parcours toute la liste cree par la fct : ListeUsers generer_users(int nombre)
+    for (int i = 0; i < liste->nb_users; i++) {
+        
+        // recu (la transaction)
+        Transaction h_trans = create_helicopter_transaction(liste->users[i].adresse);
+        
+        // on met à jour le solde (en utilisant le champ .solde de sa struct)
+        liste->users[i].solde += h_trans.txAmount;
+        
+        // on augmente la monnaySupply (l'argent vient d'être créé)
+        currency->moneySupply += h_trans.txAmount;
+        
+        printf("[Coinbase] %d BT envoyés à %s (Nouveau solde: %ld)\n", 
+                HELIREWARD, liste->users[i].adresse, (long)liste->users[i].solde);
+    }
+    
+    printf("fin : Helicopter Money\n");
+    printf("Monney Supply total : %ld \n", currency->moneySupply);
+}
 
