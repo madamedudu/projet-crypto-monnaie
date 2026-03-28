@@ -32,3 +32,47 @@ ListeUsers generer_users(int nombre) {
     return liste;
 } 
 
+
+/**
+ * Créer la transaction d'Helicopter Money
+ * Adapte l'adresse de destination en fonction de la structure User
+ * Distribue le montant initial à tous les utilisateurs.
+ */
+Transaction create_helicopter_transaction(char *dest_address) {
+    Transaction trans;
+
+    //sender : système (Coinbase)
+    memset(trans.adSender, 0, HASHLENGTH);
+    strncpy((char*)trans.adSender, "SYSTEM_COINBASE", HASHLENGTH);
+    
+    // destination : utilisateur
+    memset(trans.adReceiver, 0, HASHLENGTH);
+    strncpy((char*)trans.adReceiver, dest_address, HASHLENGTH);
+
+    // initialisation d'autres transactions
+    trans.txAmount = HELIREWARD; 
+    trans.timestamp = time(NULL);
+    strncpy(trans.comment, "Helicopter Money", MAX_STRING);
+
+    // initialisation : phase 2
+    trans.nbInputs = 0;
+    trans.lstInputs = NULL;
+    trans.nbOutputs = 0;
+    trans.lstOutputs = NULL;
+
+    // calcul : TXID (hash de la transaction)
+    char buffer[MAX_BUF];
+    sprintf(buffer, "%s%s%ld%ld", 
+            (char*)trans.adSender, 
+            (char*)trans.adReceiver, 
+            trans.txAmount, 
+            trans.timestamp);
+    
+    sha256ofString((BYTE *)buffer, (char*)trans.txid);
+
+    return trans;
+}
+
+
+
+
