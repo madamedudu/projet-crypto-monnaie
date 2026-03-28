@@ -111,5 +111,11 @@ typedef struct {
     double solde; //c'est la solde du compte (wallet) de l'utilisateur
 } User;
 
+// Structure qui contient la liste des utilisateurs
+typedef struct {
+    User* users;
+    int nb_users;
+} ListeUsers;
+
 
 #endif // __BC_DEFINES__

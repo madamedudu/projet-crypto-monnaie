@@ -3,6 +3,6 @@
 
 #include "define.h"
 
-void generer_user(User *user, int nombre);
+ListeUsers generer_user(User *user, int nombre);
 
 #endif
