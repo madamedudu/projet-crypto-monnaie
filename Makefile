@@ -10,6 +10,7 @@ OBJ_DIR = obj
 # Nom de l'exécutable final
 EXEC = bitthune
 NOM_ETU = Rendu_Chirine_Maeva_Katarzyna_Zyad_Phase1
+TEST_EXEC = testBlockchain
 
 # Liste des fichiers sources de la phase 1
 SOURCES = $(SRC_DIR)/main.c \
@@ -28,6 +29,15 @@ OBJECTS = $(OBJ_DIR)/main.o \
           $(OBJ_DIR)/utils.o \
           $(OBJ_DIR)/sha256.o \
           $(OBJ_DIR)/sha256_utils.o
+
+# Liste des fichiers sources pour les tests (sans main.c)
+TEST_OBJECTS = $(OBJ_DIR)/blockchain.o \
+                 $(OBJ_DIR)/bloc.o \
+                 $(OBJ_DIR)/transaction.o \
+                 $(OBJ_DIR)/utils.o \
+                 $(OBJ_DIR)/sha256.o \
+                 $(OBJ_DIR)/sha256_utils.o
+
 # Règle par défaut
 all: $(EXEC)
 
@@ -35,6 +45,12 @@ all: $(EXEC)
 $(EXEC): $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@
 	@echo "Compilation terminée avec succès ! Lancez ./$(EXEC)"
+
+# Règle pour compiler et lancer les tests (ne lie PAS main.o)
+test: $(OBJ_DIR)/test.o $(TEST_OBJECTS)
+	$(CC) $(CFLAGS) $^ -o $(TEST_EXEC)
+	@echo "Lancement des tests techniques..."
+	./$(TEST_EXEC)
 
 # Règle pour compiler chaque fichier .c en .o
 # Crée le dossier obj/ s'il n'existe pas
@@ -44,12 +60,12 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 
 # Règle pour nettoyer les fichiers compilés (utile en cas de bug)
 clean:
-	rm -rf $(OBJ_DIR) $(EXEC)
+	rm -rf $(OBJ_DIR) $(EXEC) $(TEST_EXEC)
 	@echo "Fichiers de compilation nettoyés."
 
 # Règle pour générer l'archive zip pour le rendu
 deliver: clean # le clean permet d'eviter de rendre un fichier compilé 
-	mkdir -p $(NOM_ETU)NOM_EETU
+	mkdir -p $(NOM_ETU)
 	cp -r src $(NOM_ETU)
 	cp -r include $(NOM_ETU)
 	cp Makefile $(NOM_ETU)
