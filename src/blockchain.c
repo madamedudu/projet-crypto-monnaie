@@ -67,23 +67,23 @@ int verification_blockchain(Blockchain *bc){
     }
 
     // Vérification du bloc genesis
-    Slist *courant = bc->blocklist; // on est sur le 1er bloc de la blockchain (genesis)
+    Slist *courant = bc->blocklist; //on est sur le 1er bloc de la blockchain (genesis)
     Block *bloc_precedent = NULL;
 
     int i= 0;
     while (courant != NULL) {
-        Block *courant_bloc = (Block *)courant->info; // on recupere le bloc courant (le bloc courant c'est l'info de la liste chainee)
-        //cas un on est sur le bloc genesis
+        Block *courant_bloc = (Block *)courant->info; //on recupere le bloc courant 
+        //cas un: on est sur le bloc genesis
         if (i == 0) {
             // Vérification du bloc genesis (chirine : j'ai ajouté un char pour que ça passe les warnings)
             if (strcmp((char*)courant_bloc->previousHash, "0000000000000000000000000000000000000000000000000000000000000000") != 0) {
-                return 0; // Bloc genesis invalide
+                return 0; //Bloc genesis invalide
             }
-        //cas deux on est sur les autres blocs
+        //cas deux: on est sur les autres blocs
         } else {
-            // Vérification du hash du bloc courant correspond au hash du bloc précédent
+            //Vérification du hash du bloc courant correspond au hash du bloc précédent
             if (strcmp((char *)courant_bloc->previousHash, (char *)bloc_precedent->blockHash) != 0) {
-                return 0; // Bloc invalide  
+                return 0; //Bloc courant invalide  
             }
         }
         bloc_precedent = courant_bloc;
@@ -93,14 +93,14 @@ int verification_blockchain(Blockchain *bc){
     return 1; // Blockchain valide 
 }
 
-//deuxieme verification, on recalcul le hash du bloc avec le merkle root (on va le recalculer sur chaque bloc de la blockchain ensuite)
+//on verifie le merkle root du bloc
 int verification_merkle_bloc(Block *bloc){
     char merkle_calcul[65];
     merkle_root((Transaction *)bloc->transactions, bloc->nbTx, merkle_calcul);
     return strcmp(merkle_calcul, (char *)bloc->merkleTree) == 0;
 }
 
-//verificaation du merkle root de la blockchain
+//on vérifie le merkle root de la blockchain
 int verification_merkle_blockchain(Blockchain *bc){
     // Blockchain inexistante ou vide
     if (bc == NULL || bc->blocklist == NULL) {
