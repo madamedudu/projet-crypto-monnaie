@@ -56,3 +56,42 @@ void merkle_root(Transaction transactions[], int nb_transactions, char root[65])
     strcpy(root, etage_courant[0]);
 }
 // strcpy(nouveau_bloc->MerkleRoot.HashValue, racine_calculee);
+
+//---- bloc de chainage ----
+
+//on fait d'abord une vérification du bloc genesis, ensuite on vérifie que le hash du bloc courant correspond au hash du bloc précédent
+int verification_blockchain(Blockchain *bc){
+    if (bc == NULL || bc->blocklist == NULL) {
+        return 0; // Blockchain invalide
+    }
+
+    // Vérification du bloc genesis
+    Slist *courant = bc->blocklist; // on est sur le 1er bloc de la blockchain (genesis)
+    Block *bloc_precedent = NULL;
+
+    int i= 0;
+    while (courant != NULL) {
+        Block *courant_bloc = (Block *)courant->info; // on recupere le bloc courant (le bloc courant c'est l'info de la liste chainee)
+        //cas un on est sur le bloc genesis
+        if (i == 0) {
+            // Vérification du bloc genesis
+            if (strcmp(courant_bloc->previousHash, "0000000000000000000000000000000000000000000000000000000000000000") != 0) {
+                return 0; // Bloc genesis invalide
+            }
+        //cas deux on est sur les autres blocs
+        } else {
+            // Vérification du hash du bloc courant correspond au hash du bloc précédent
+            if (strcmp(courant_bloc->previousHash, bloc_precedent->blockHash) != 0) {
+                return 0; // Bloc invalide  
+            }
+        }
+        bloc_precedent = courant_bloc;
+        courant = courant->next; // on passe au bloc suivant
+        i++;
+    }
+    return 1; // Blockchain valide 
+}
+
+//deuxieme verification, on recalcul le hash du bloc avec le merkle root (on va le recalculer sur chaque bloc de la blockchain ensuite)
+
+
