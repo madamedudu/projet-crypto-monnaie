@@ -39,6 +39,7 @@ void export_blockchain_json(ListeUsers liste, Blockchain *blockchain, const char
 
 
 
+
     //--------------------- USERS ---------------------
     fprintf(file, "  \"users\": [\n");
     for(int i = 0; i < liste.nb_users; i++) {
@@ -51,6 +52,7 @@ void export_blockchain_json(ListeUsers liste, Blockchain *blockchain, const char
             fprintf(file, "    },\n");
     }
     fprintf(file, "  ],\n");
+
 
 
 
@@ -77,6 +79,7 @@ void export_blockchain_json(ListeUsers liste, Blockchain *blockchain, const char
 
 
 
+
             //-------------- TRANSACTIONS --------------------
             fprintf(file, "      \"transactions\": [\n");
             if (block->transactions != NULL){
@@ -90,11 +93,13 @@ void export_blockchain_json(ListeUsers liste, Blockchain *blockchain, const char
                     fprintf(file, "          \"amount\": %ld,\n", tx->txAmount);
                     fprintf(file, "          \"timestamp\": %ld\n", tx->timestamp);
 
-                    if (TransactionCourante->next == NULL)
+                    if(TransactionCourante->next == NULL){
                         fprintf(file, "        }\n");
-                    else
+                    }
+                    else{
                         fprintf(file, "        },\n");
-
+                    }
+                        
                     TransactionCourante = TransactionCourante->next;
                 }
             }
