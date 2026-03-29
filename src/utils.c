@@ -8,7 +8,7 @@ void afficher_users(ListeUsers liste) {
     printf("----- LISTE DES UTILISATEURS :-----\n");
 
     for (int i = 0; i < liste.nb_users; i++) {
-        printf("%s : %ld BT\n", liste.users[i].adresse, liste.users[i].solde);
+        printf("%s : %.2f BT\n", liste.users[i].adresse, liste.users[i].solde);
     }
 
     printf("----------------------------------\n");
