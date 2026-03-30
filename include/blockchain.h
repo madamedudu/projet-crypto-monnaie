@@ -4,7 +4,7 @@
 #include "define.h"
 void hash_transaction(Transaction trans, char hashRes[65]);
 void hash_parent(char left[65], char right[65], char parentRes[65]);
-void merkle_root(Transaction transactions[], int nb_transactions, char root[65]);
+void merkle_root(Slist *liste, int nb_tx, char root[65]);
 int verification_blockchain(Blockchain *bc);
 int verification_merkle_bloc(Block *bloc);
 int verification_merkle_blockchain(Blockchain *bc);

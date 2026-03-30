@@ -1,6 +1,7 @@
 #include "sha256_utils.h"
 #include "define.h"
 
+// Merkle Root
 // Transforme les données d'une transaction en chaîne puis calcule son SHA256
 void hash_transaction(Transaction trans, char hashRes[65]) {
     char buffer[512]; // Buffer pour concaténer les infos de la transaction
@@ -23,20 +24,25 @@ void hash_parent(char left[65], char right[65], char parentRes[65]) {
 
 //La fonction principale qui calcule la Merkle Root d'un tableau de transactions
  
-void merkle_root(Transaction transactions[], int nb_transactions, char root[65]) {
-    if (nb_transactions == 0) {
+void merkle_root(Slist *liste, int nb_tx, char root[65]) {
+    if (nb_tx == 0) {
         strcpy(root, "0000000000000000000000000000000000000000000000000000000000000000");
         return;
     }
 
     // On stocke les hashs de base (les feuilles)
     char etage_courant[MAXTX][65];
-    for (int i = 0; i < nb_transactions; i++) {
-        hash_transaction(transactions[i], etage_courant[i]);
+    Slist *temp = liste;
+    
+    // On parcourt la liste Slist pour remplir le premier étage
+    for (int i = 0; i < nb_tx && temp != NULL; i++) {
+        Transaction *tx = (Transaction *)temp->info;
+        hash_transaction(*tx, etage_courant[i]);
+        temp = temp->next;
     }
 
     // On réduit l'arbre etage par etage
-    int nb_actuel = nb_transactions;
+    int nb_actuel = nb_tx;
     while (nb_actuel > 1) {
         int nb_suivant = 0;
         for (int i = 0; i < nb_actuel; i += 2) {
@@ -96,7 +102,7 @@ int verification_blockchain(Blockchain *bc){
 //on verifie le merkle root du bloc
 int verification_merkle_bloc(Block *bloc){
     char merkle_calcul[65];
-    merkle_root((Transaction *)bloc->transactions, bloc->nbTx, merkle_calcul);
+    merkle_root(bloc->transactions, bloc->nbTx, merkle_calcul); //(Zizu) J'ai enleve le forcage de type que t'as fait car j'ai corrige ma fonction en remplacant avec Slist
     return strcmp(merkle_calcul, (char *)bloc->merkleTree) == 0;
 }
 
@@ -196,3 +202,4 @@ int ajouter_bloc_blockchain(Blockchain *bc, Block *nouveau_bloc, int difficulte)
 
     return 1; // Succès de l'ajout
 }
+
