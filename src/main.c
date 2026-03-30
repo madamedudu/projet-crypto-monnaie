@@ -6,6 +6,8 @@
 #include "sha256_utils.h"
 #include "blockchain.h"   
 #include "bloc.h"
+#include "transaction.h"
+#include "utils.h"
 
 int main() {
 
@@ -101,5 +103,60 @@ int main() {
 //     }
 
 //     printf("Tous les tests sont passés avec succès. La blockchain est sécurisée et fonctionnelle.\n");
+
+    ListeUsers liste = generer_users(3); //générer 3 utilisateurs
+    afficher_users(liste); //afficher les utilisateurs
+    currency_t *currency = init_currency(); //creer la blockchain avec le bloc genesis
+    export_blockchain_json(liste, currency->bc, "test.json"); //exporter le JSON
+
     return 0;
 }
+
+
+
+
+void test_generer_users() {
+    printf("=== TEST GENERER USERS ===\n");
+    ListeUsers liste = generer_users(3);
+
+    if (liste.nb_users != 3) {
+        printf("ECHEC : mauvais nombre d'utilisateurs\n");
+        return;
+    }
+
+    for (int i = 0; i < liste.nb_users; i++) {
+        printf("User %d -> %s | Solde : %.2f\n",i + 1, liste.users[i].adresse, liste.users[i].solde);
+
+        if (liste.users[i].solde != 0){
+            printf("ECHEC : solde incorrect\n");
+            return;
+        }
+    }
+
+    printf("SUCCES : generer_users fonctionne\n");
+    free(liste.users);
+}
+
+void test_export_json() {
+    printf("=== TEST EXPORT JSON ===\n");
+    ListeUsers liste = generer_users(2);
+
+    currency_t *currency = init_currency();
+    if (currency == NULL) {
+        printf("ECHEC : init currency\n");
+        return;
+    }
+
+    export_blockchain_json(liste, currency->bc, "test_blockchain.json");
+    FILE *file = fopen("test_blockchain.json", "r");
+
+    if (file == NULL) {
+        printf("ECHEC : fichier non créé\n");
+        return;
+    }
+
+    printf("SUCCES : fichier JSON créé\n");
+    fclose(file);
+    free(liste.users);
+}
+
