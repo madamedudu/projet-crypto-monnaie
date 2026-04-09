@@ -139,7 +139,7 @@ int main() {
             case 4:
                 printf("\n--- EXPORT JSON ---\n");
                 if (ma_monnaie == NULL) {
-                    printf("[Erreur] Option 1 requise.\n");
+                    printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
                 } else {
                     char nom_fichier[100];
                     printf("Nom du fichier de sauvegarde : ");
@@ -148,9 +148,9 @@ int main() {
                     
                     // Si le mot est trop court ou s'il ne se termine pas par ".json"
                     if (len < 5 || strcmp(nom_fichier + len - 5, ".json") != 0) {
-                        strcat(nom_fichier, ".json"); // On colle l'extension à la fin
+                        strcat(nom_fichier, ".json");
                     }
-                    
+
                     export_blockchain_json(ma_liste_users, ma_monnaie->bc, nom_fichier);
                 }
                 break;
