@@ -36,10 +36,6 @@ void export_blockchain_json(ListeUsers liste, Blockchain *blockchain, const char
 
 
 
-
-
-
-
     //--------------------- USERS ---------------------
     fprintf(file, "  \"users\": [\n");
     for(int i = 0; i < liste.nb_users; i++) {
@@ -52,9 +48,6 @@ void export_blockchain_json(ListeUsers liste, Blockchain *blockchain, const char
             fprintf(file, "    },\n");
     }
     fprintf(file, "  ],\n");
-
-
-
 
 
 
@@ -75,8 +68,6 @@ void export_blockchain_json(ListeUsers liste, Blockchain *blockchain, const char
             fprintf(file, "      \"miner\": \"%s\",\n", block->minerName);
             fprintf(file, "      \"previousHash\": \"%s\",\n", block->previousHash);
             fprintf(file, "      \"hash\": \"%s\",\n", block->blockHash);
-
-
 
 
 
