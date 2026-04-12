@@ -141,7 +141,7 @@ currency_t * init_currency() {
     }
 
     //yayy = le nom a changer
-    strncpy(currency->currency_name, "yayy", MAX_STRING);
+    strncpy(currency->currency_name, "BTU", MAX_STRING);
     currency->moneySupply = 0; // Sera mis à jour lors de l'helicopter money
     
     //--- initialisation du blockchain ---
