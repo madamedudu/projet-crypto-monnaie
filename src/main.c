@@ -8,6 +8,8 @@
 #include "bloc.h"
 #include "transaction.h"
 #include "utils.h" 
+
+//on essaye de voir si ça git pull ce main
 int main() {
     printf("\n========== DEMARRAGE SYSTEME BLOCKCHAIN ==========\n");
 
