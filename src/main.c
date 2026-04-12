@@ -24,12 +24,13 @@ int main() {
         printf("3. Verifier la coherence de la blockchain\n");
         printf("4. Sauver la blockchain au format json\n");
         printf("5. Lancer l'helicopter money (Distribution initiale)\n");
-        printf("6. Quitter\n");
+        printf("6. Afficher les utilisateurs\n");
+        printf("7. Quitter\n");
         printf("================================================\n");
         
         int saisie_valide = 0;
         while (saisie_valide == 0) {
-            printf("Votre choix (1-6) : ");
+            printf("Votre choix (1-7) : ");
             
             //gestion de l'erreur si l'utilisateur tape une lettre
             if (scanf("%d", &choix) != 1) {
@@ -37,7 +38,7 @@ int main() {
                 printf("[Erreur] Veuillez entrer un chiffre entier.\n");
             } 
             //gestion de l'erreur si le chiffre est hors limites (1 a 6)
-            else if (choix < 1 || choix > 6) {
+            else if (choix < 1 || choix > 7) {
                 printf("[Erreur] Veuillez entrer un chiffre entre 1 et 6.\n");
             } 
             else {
@@ -171,8 +172,17 @@ int main() {
                     afficher_users(ma_liste_users);
                 }
                 break;
-
+            
             case 6:
+                printf("\n--- LISTE DES UTILISATEURS ---\n");
+                if (ma_liste_users.nb_users == 0) {
+                    printf("[Info] Aucun utilisateur n'est enregistré.\n");
+                } else {
+                    afficher_users(ma_liste_users);
+                }
+                break;
+
+            case 7:
                 printf("\nFermeture du programme.\n");
                 return 0;
         }
@@ -184,7 +194,7 @@ int main() {
             printf("------------------------------------------------\n");
         }
 
-    } while (choix != 6);
+    } while (choix != 7);
 
     return 0;
 }
