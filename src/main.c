@@ -7,107 +7,196 @@
 #include "blockchain.h"   
 #include "bloc.h"
 #include "transaction.h"
-#include "utils.h"
+#include "utils.h" 
 
+//on essaye de voir si ça git pull ce main
 int main() {
+    printf("\n========== DEMARRAGE SYSTEME BLOCKCHAIN ==========\n");
 
-    
-//     //test d'ajout de bloc à la blockchain
-//    printf("[1] Initialisation de la monnaie (Genesis)...\n");
-//     currency_t *currency = init_currency();
-//     if (currency == NULL) {
-//         fprintf(stderr, "Erreur lors de l'initialisation de la monnaie.\n");
-//         return EXIT_FAILURE;
-//     } 
+    currency_t *ma_monnaie = NULL;
+    ListeUsers ma_liste_users;
+    ma_liste_users.nb_users = 0;
+    int helicopter_deja_lance = 0; //faux pour l'instant
+    int choix = 0;
 
-//     Blockchain *bc = currency->bc;
-//     printf("Initialisation de la blockchain réussie avec le bloc Genesis.\n");
-
-
-
-//     printf("[2] Création d'un nouveau bloc valide...\n");
-//     Block *nouveau_bloc = malloc(sizeof(Block)); //nouveau bloc à ajouter
-//     if (nouveau_bloc == NULL) {
-//         fprintf(stderr, "Erreur lors de l'allocation du nouveau bloc.\n");
-//         return EXIT_FAILURE;
-//     }
-//     Block *genesis = (Block *)bc->blocklist->info; // On récupère le bloc précédent (genesis)
-
-//     // Remplissage du nouveau bloc
-//     nouveau_bloc->index = genesis->index + 1;
-//     strncpy((char *)nouveau_bloc->previousHash, (char *)genesis->blockHash, MAX_STRING);
-//     nouveau_bloc->timestamp = time(NULL);
-//     nouveau_bloc->nbTx = 0; // Pas de transactions pour ce test
-//     nouveau_bloc->transactions = NULL; // Pas de transactions pour ce test
-//     strncpy(nouveau_bloc->minerName, "Alice", MAX_STRING);
-//     strncpy(nouveau_bloc->comment, "Premier bloc après le Genesis", MAX_STRING);
-//     nouveau_bloc->nonce = 0; // Nonce à définir lors du minage
-
-
-//     //init du merkle root à 0 pour le test (pas de transactions)
-//     memset(nouveau_bloc->merkleTree, '0', HASHLENGTH - 1);
-//     nouveau_bloc->merkleTree[HASHLENGTH - 1] = '\0';
-
-//     // Mine le bloc pour remplir le hash
-//     printf("Minage du nouveau bloc...\n");
-//     mine_block(nouveau_bloc, bc->difficulty); 
-
-//     // Ajout du bloc à la blockchain
-//     printf("Ajout du nouveau bloc à la blockchain...\n");
-//     if (ajouter_bloc_blockchain(bc, nouveau_bloc, bc->difficulty)) {
-//         printf("SUCCES: Nouveau bloc ajouté à la blockchain avec succès !\n");
-//     } else {
-//         fprintf(stderr, "Erreur lors de l'ajout du nouveau bloc à la blockchain.\n");
-//         free(nouveau_bloc);
-//         return EXIT_FAILURE;
-//     }
-
-//     printf("[3] Vérification de la validité de la blockchain...\n");
-//     if (verification_blockchain(bc)) {
-//         printf("SUCCES: La blockchain est valide !\n");
-//     } else {
-//         fprintf(stderr, "Erreur : La blockchain est invalide.\n");
-//         return EXIT_FAILURE;
-//     }
-
-//     printf("[4] Test de sécurité : Un pirate tente de modifier le bloc...\n");
-    
-//     // On crée un bloc pirate identique au précédent
-//     Block *bloc_pirate = malloc(sizeof(Block));
-//     if (bloc_pirate != NULL) {
-//         memcpy(bloc_pirate, nouveau_bloc, sizeof(Block)); 
+    do {
+        printf("\n================ MENU PRINCIPAL ================\n");
+        printf("1. Creer la blockchain, la genesis, les utilisateurs\n");
+        printf("2. Creer une transaction\n");
+        printf("3. Verifier la coherence de la blockchain\n");
+        printf("4. Sauver la blockchain au format json\n");
+        printf("5. Lancer l'helicopter money (Distribution initiale)\n");
+        printf("6. Afficher les utilisateurs\n");
+        printf("7. Quitter\n");
+        printf("================================================\n");
         
-//         // Le pirate modifie une info (l'index) mais ne recalcule pas le minage !
-//         bloc_pirate->index = 999; 
-//         strncpy(bloc_pirate->comment, "Bloc hacké !", MAX_STRING);
-        
-//         printf("Passage du bloc hacké à la douane...\n");
-//         if (ajouter_bloc_blockchain(bc, bloc_pirate, bc->difficulty)) {
-//             printf("CATASTROPHE : La douane a laissé passer le pirate !\n");
-//         } else {
-//             printf("SÉCURITÉ VALIDÉE : La douane a bien bloqué le pirate !\n");
-//         }
-//         free(bloc_pirate);
-//     }
-//     printf("[5] Lancement de l'audit global de la blockchain complète...\n");
-    
-//     // On appelle tes deux fonctions d'audit global
-//     int chaine_valide = verification_blockchain(bc);
-//     int merkle_valide = verification_merkle_blockchain(bc);
+        int saisie_valide = 0;
+        while (saisie_valide == 0) {
+            printf("Votre choix (1-7) : ");
+            
+            //gestion de l'erreur si l'utilisateur tape une lettre
+            if (scanf("%d", &choix) != 1) {
+                while(getchar() != '\n'); 
+                printf("[Erreur] Veuillez entrer un chiffre entier.\n");
+            } 
+            //gestion de l'erreur si le chiffre est hors limites (1 a 6)
+            else if (choix < 1 || choix > 7) {
+                printf("[Erreur] Veuillez entrer un chiffre entre 1 et 6.\n");
+            } 
+            else {
+                saisie_valide = 1; 
+            }
+        }
 
-//     if (chaine_valide == 1 && merkle_valide == 1) {
-//         printf("AUDIT RÉUSSI : La blockchain entière (Genesis + %d bloc) est 100%% intègre !\n", bc->nbBlocks - 1);
-//     } else {
-//         fprintf(stderr, "AUDIT ÉCHOUÉ : Une corruption a été détectée dans la chaîne.\n");
-//         return EXIT_FAILURE;
-//     }
+        switch (choix) {
+            
+            case 1:
+                printf("\n--- INITIALISATION ---\n");
+                if (ma_monnaie == NULL) {
+                    ma_monnaie = init_currency(); 
+                    if (ma_monnaie != NULL) {
+                        ma_liste_users = generer_users(MAX_USERS); 
+                        
+                        printf("[Succes] Blockchain, bloc Genesis et %d utilisateurs crees.\n\n", ma_liste_users.nb_users);
+                        afficher_users(ma_liste_users);
+                    } else {
+                        printf("[Erreur] Echec de l'initialisation.\n");
+                    }
+                } else {
+                    printf("[Info] La blockchain est deja initialisee.\n");
+                }
+                break;
 
-//     printf("Tous les tests sont passés avec succès. La blockchain est sécurisée et fonctionnelle.\n");
+            case 2:
+                //transaction entre utilisateurs
+                printf("\n--- NOUVELLE TRANSACTION ---\n");
+                if (ma_monnaie == NULL || ma_liste_users.nb_users == 0) {
+                    printf("[Erreur] Veuillez d'abord creer la blockchain et les utilisateurs (Option 1).\n");
+                    break;
+                }
 
-    ListeUsers liste = generer_users(3); //générer 3 utilisateurs
-    afficher_users(liste); //afficher les utilisateurs
-    currency_t *currency = init_currency(); //creer la blockchain avec le bloc genesis
-    export_blockchain_json(liste, currency->bc, "test.json"); //exporter le JSON
+                //affiche la liste des users
+                printf("\n-- Utilisateurs enregistres --\n");
+                for (int i = 0; i < ma_liste_users.nb_users; i++) {
+                    printf("- %s (Solde : %ld BT)\n", ma_liste_users.users[i].adresse, (long)ma_liste_users.users[i].solde);
+                }
+                printf("------------------------------\n");
+
+                char emetteur[MAX_STRING];
+                char beneficiaire[MAX_STRING];
+                long montant;
+
+                //saisi des info trans
+                printf("Entrez le nom de l'emetteur : ");
+                scanf("%49s", emetteur);
+                
+                printf("Entrez le nom du beneficiaire : ");
+                scanf("%49s", beneficiaire);
+                
+                printf("Entrez le montant : ");
+                if (scanf("%ld", &montant) != 1) {
+                    while(getchar() != '\n'); 
+                    printf("[Erreur] Saisie du montant invalide. Annulation de la transaction.\n");
+                    break;
+                }
+
+                //Verification si les emetteurs et benef existent ds le tab
+                int idx_emetteur = -1;
+                int idx_beneficiaire = -1;
+                
+                for (int i = 0; i < ma_liste_users.nb_users; i++) {
+                    if (strcmp(emetteur, ma_liste_users.users[i].adresse) == 0) idx_emetteur = i;
+                    if (strcmp(beneficiaire, ma_liste_users.users[i].adresse) == 0) idx_beneficiaire = i;
+                }
+
+                if (idx_emetteur == -1 || idx_beneficiaire == -1) {
+                    printf("[Erreur] L'emetteur ou le beneficiaire n'existe pas. Annulation de la transaction.\n");
+                    break;
+                }
+
+                if (montant <= 0 || ma_liste_users.users[idx_emetteur].solde < montant) {
+                    printf("[Erreur] Solde insuffisant. Annulation de la transaction.\n");
+                    break;
+                }
+                
+                //solde des comptes maj
+                ma_liste_users.users[idx_emetteur].solde -= montant;
+                ma_liste_users.users[idx_beneficiaire].solde += montant;
+
+                printf("\n[Succes] Transaction validee : %s a envoye %ld BT a %s.\n", emetteur, montant, beneficiaire);
+                break;
+
+            case 3:
+                printf("\n--- VERIFICATION DE LA BLOCKCHAIN ---\n");
+                if (ma_monnaie == NULL) {
+                    printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
+                } else {
+                    if (verification_blockchain(ma_monnaie->bc)) {
+                        printf("[Succes] La blockchain est parfaitement coherente.\n");
+                    } else {
+                        printf("[Erreur] Corruption detectee dans la blockchain.\n");
+                    }
+                }
+                break;
+
+            case 4:
+                printf("\n--- EXPORT JSON ---\n");
+                if (ma_monnaie == NULL) {
+                    printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
+                } else {
+                    char nom_fichier[100];
+                    printf("Nom du fichier de sauvegarde : ");
+                    scanf("%99s", nom_fichier);
+                    int len = strlen(nom_fichier);
+                    
+                    // Si le mot est trop court ou s'il ne se termine pas par ".json"
+                    if (len < 5 || strcmp(nom_fichier + len - 5, ".json") != 0) {
+                        strcat(nom_fichier, ".json");
+                    }
+
+                    export_blockchain_json(ma_liste_users, ma_monnaie->bc, nom_fichier);
+                }
+                break;
+
+            case 5:
+                printf("\n--- HELICOPTER MONEY ---\n");
+                if (ma_monnaie == NULL || ma_liste_users.nb_users == 0) {
+                    printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
+                } 
+                else if (helicopter_deja_lance == 1) {
+                    printf("[Erreur] L'Helicopter Money a déjà été distribué.\n");
+                } 
+                else {
+                    
+                    run_helicopter_money(&ma_liste_users, ma_monnaie);
+                    helicopter_deja_lance = 1; 
+                    printf("[Succes] Distribution de l'helicopter money realisee.\n\n");
+                    afficher_users(ma_liste_users);
+                }
+                break;
+            
+            case 6:
+                printf("\n--- LISTE DES UTILISATEURS ---\n");
+                if (ma_liste_users.nb_users == 0) {
+                    printf("[Info] Aucun utilisateur n'est enregistré.\n");
+                } else {
+                    afficher_users(ma_liste_users);
+                }
+                break;
+
+            case 7:
+                printf("\nFermeture du programme.\n");
+                return 0;
+        }
+
+        //affichage de la masse monetaire en fin de chaque boucle
+        if (ma_monnaie != NULL) {
+            printf("\n------------------------------------------------\n");
+            printf("Masse monetaire totale : %ld BT\n", ma_monnaie->moneySupply);
+            printf("------------------------------------------------\n");
+        }
+
+    } while (choix != 7);
 
     return 0;
 }

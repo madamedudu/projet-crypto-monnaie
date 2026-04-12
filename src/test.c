@@ -123,6 +123,9 @@ int main() {
     test_utilisateurs_et_helicopter_money();
     test_creation_bloc_et_merkle();
     test_audit_complet_et_corruption();
+    
+    
+    
 
     printf("\n==========      TOUS LES TESTS SONT AU VERT        ==========\n");
     return 0;

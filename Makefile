@@ -61,7 +61,8 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 # Règle pour nettoyer les fichiers compilés (utile en cas de bug)
 clean:
 	rm -rf $(OBJ_DIR) $(EXEC) $(TEST_EXEC)
-	@echo "Fichiers de compilation nettoyés."
+	rm -f *.json
+	@echo "Fichiers de compilation et le fichier json nettoyés."
 
 # Règle pour générer l'archive zip pour le rendu
 deliver: clean # le clean permet d'eviter de rendre un fichier compilé 

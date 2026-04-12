@@ -72,8 +72,8 @@ int verification_blockchain(Blockchain *bc){
         return 0; // Blockchain invalide
     }
 
-    // Vérification du bloc genesis
-    Slist *courant = bc->blocklist; //on est sur le 1er bloc de la blockchain (genesis)
+    
+    Slist *courant = bc->blocklist; //on est sur le 1er bloc de la blockchain
     Block *bloc_precedent = NULL;
 
     int i= 0;
@@ -126,19 +126,19 @@ int verification_merkle_blockchain(Blockchain *bc){
 
 //on verifie la preuve de travail du bloc
 int verification_preuve_travail(Block *bloc,int difficulte){
-    // On vérifie que le hash du bloc commence par le nombre de zéros requis
+    //vérifie que le hash du bloc commence par le bon nb de 0
     for (int i = 0; i < difficulte; i++) {
         if (bloc->blockHash[i] != '0') {
-            return 0; // Preuve de travail invalide
+            return 0;
         }
     }
-    return 1; // Preuve de travail valide
+    return 1; 
 }
 
 //on verfifie le hash du bloc  
 int verification_hash_bloc(Block *bloc){
-    char buffer[512]; // Buffer pour concaténer les infos de la transaction
-    char hash_recalcule[HASHLENGTH]; // Buffer pour stocker le hash calculé
+    char buffer[512]; 
+    char hash_recalcule[HASHLENGTH]; 
     //hash généré au minage 
     sprintf(buffer, "%d%s%ld%s%ld", bloc->index,(char*)bloc->previousHash,(long)bloc->timestamp,(char*)bloc->merkleTree,bloc->nonce);
     sha256ofString((BYTE *)buffer, hash_recalcule);
@@ -148,10 +148,13 @@ int verification_hash_bloc(Block *bloc){
 //ajout bloc à la blockchain
 int ajouter_bloc_blockchain(Blockchain *bc, Block *nouveau_bloc, int difficulte) {
     if (bc == NULL || nouveau_bloc == NULL) {
-        return 0; // Échec de l'ajout
+        return 0; 
     }
-
-    // Cette fonction ne sert donc qu'à ajouter les blocs suivants.
+    if (bc->nbBlocks >= MAX_BLOCKS) {
+        printf("[Erreur] La blockchain est pleine (Maximum %d blocs atteints).\n", MAX_BLOCKS);
+        return 0; 
+    }
+    // ajouter les blocs suivants
     if (bc->blocklist == NULL) {
         printf("Erreur : La blockchain n'a pas été initialisée (pas de Genesis).\n");
         return 0;
@@ -160,34 +163,34 @@ int ajouter_bloc_blockchain(Blockchain *bc, Block *nouveau_bloc, int difficulte)
 
     if (!verification_hash_bloc(nouveau_bloc)) {
         printf("Hash du bloc invalide.\n");
-        return 0; // Échec de l'ajout
+        return 0; 
     }
     if (!verification_merkle_bloc(nouveau_bloc))
     {
         printf("Merkle root du bloc invalide.\n");
-        return 0; // Échec de l'ajout
+        return 0;
     }
     if (!verification_preuve_travail(nouveau_bloc, difficulte)) {
         printf("Refusé : La preuve de travail n'est pas respectée.\n");
         return 0;
     }
 
-    // Ajout du bloc à la fin de la liste chaînée
+    //add bloc à la fin de la liste chaînée
 
-        //1-on fait le parcours de la liste pour trouver le dernier élément
+        //parcours de la liste pour trouver le dernier élément
     Slist *courant = bc->blocklist;
     while (courant->next != NULL) {
         courant = courant->next;   
     }
-    Block *dernier_bloc = (Block *)courant->info; // on recupere le dernier bloc
+    Block *dernier_bloc = (Block *)courant->info; // on recup le dernier bloc
 
-        //2-on vérifie que le hash du nouveau bloc correspond au hash du dernier bloc
+        //vérif que le hash du nouveau= hash du dernier bloc
     if (strcmp((char *)nouveau_bloc->previousHash, (char *)dernier_bloc->blockHash) != 0) {
         printf("Erreur : Previous Hash != Hash du dernier bloc\n");
-        return 0; // Échec de l'ajout   
+        return 0;   
     }
 
-        //3-on ajoute le nouveau bloc à la fin de la liste (chainage)
+        //add nouveau bloc à la fin de la liste
     Slist *nouveau_noeud = (Slist *)malloc(sizeof(Slist));
     if (nouveau_noeud == NULL) {
         printf("Erreur : Impossible d'allouer de la mémoire pour le nouveau bloc.\n");
@@ -198,8 +201,8 @@ int ajouter_bloc_blockchain(Blockchain *bc, Block *nouveau_bloc, int difficulte)
     courant->next = nouveau_noeud;
 
     printf("Bloc %d ajouté à la blockchain !\n", nouveau_bloc->index);
-    bc->nbBlocks++; //mise à jour du nombre de blocs dans la blockchain
+    bc->nbBlocks++;
 
-    return 1; // Succès de l'ajout
+    return 1; 
 }
 
