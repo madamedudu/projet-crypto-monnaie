@@ -4,6 +4,65 @@
 #include <time.h>
 #include "define.h"
 #include "sha256_utils.h"
+#include "blockchain.h"
+
+void create_nouveau_bloc(Blockchain *bc) {
+    if (bc == NULL || bc->blocklist == NULL) return;
+    
+    //On trouve le dernier bloc
+    Slist *bloc_courant = bc->blocklist;
+    while (bloc_courant->next != NULL){
+        bloc_courant = bloc_courant->next;
+    }
+
+    Block *dernier_bloc = (Block *)bloc_courant->info;
+
+    //On créer un nouveau bloc
+    Block *nouveau_block = malloc(sizeof(Block));
+    if (nouveau_block == NULL){
+        printf("erreur allocation du nouveau bloc\n");
+        return;
+    }
+ 
+    memset(nouveau_block, 0, sizeof(Block)); //On met les champs un bloc à 0 au debut
+
+    //On initialise le nouveau bloc
+    nouveau_block->index = bc->nbBlocks;
+    nouveau_block->timestamp = time(NULL);
+    nouveau_block->nbTx = 0;
+    nouveau_block->transactions = NULL;
+    nouveau_block->nonce = 0;
+
+    //On relie le nouveau bloc avec le dernier bloc de la blockchain
+    strcpy((char *)nouveau_block->previousHash, (char *)dernier_bloc->blockHash); //le nouveau bloc pointe vers le hash du bloc précédent
+
+    //On initialise des champs de texte
+    memset(nouveau_block->merkleTree, '0', HASHLENGTH - 1);
+    nouveau_block->merkleTree[HASHLENGTH - 1] = '\0';
+
+    memset(nouveau_block->blockHash, 0, HASHLENGTH);
+
+    strcpy(nouveau_block->minerName, "");
+    strcpy(nouveau_block->comment, "New pending block");
+
+    //On ajoute le bloc à la liste chaînée (on doit donc crée un nouveau noeud de la LC)
+    Slist *nouveau_noeud = malloc(sizeof(Slist));
+    if (nouveau_noeud == NULL) {
+        free(nouveau_block);
+        printf("erreur d'allocation du nouveau noeud\n");
+        return;
+    }
+
+    nouveau_noeud->info = nouveau_block;
+    nouveau_noeud->next = NULL;
+
+    bloc_courant->next = nouveau_noeud;
+
+    bc->nbBlocks++;
+
+    printf("Le nouveau bloc %d a été créé ! \n", nouveau_block->index);
+}
+
 
 
 //--- mining (hash) ---

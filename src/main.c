@@ -154,7 +154,7 @@ int main() {
                         strcat(nom_fichier, ".json");
                     }
 
-                    export_blockchain_json(ma_liste_users, ma_monnaie->bc, nom_fichier);
+                    export_blockchain_json(ma_monnaie, nom_fichier);
                 }
                 break;
 

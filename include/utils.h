@@ -5,6 +5,6 @@
 
 void afficher_users(ListeUsers liste);
 
-void export_blockchain_json(ListeUsers liste, Blockchain *bc, const char* filename);
+void export_blockchain_json(currency_t *currency, const char *filename);
 
 #endif 
