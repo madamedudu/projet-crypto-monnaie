@@ -20,6 +20,32 @@ void mine_block(Block *bloc, int difficulty) {
 
     int success = 0; //pour touver le hash valide (difficulty = 4)
 
+
+    // --- Calcul du Merkle Root si on a des transactions ---
+    // Si c'est le bloc Genesis, nbTx vaut 0 donc on saute cette étape.
+    if (bloc->nbTx > 0 && bloc->transactions != NULL) {
+        
+        // On alloue un tableau temporaire pour la fonction merkle_root
+        Transaction *tab_tx = malloc(bloc->nbTx * sizeof(Transaction));
+        if (tab_tx != NULL) {
+            Slist *courant = bloc->transactions;
+            
+            // On copie le contenu de la Slist dans le tableau
+            for (int i = 0; i < bloc->nbTx; i++) {
+                if (courant != NULL && courant->info != NULL) {
+                    tab_tx[i] = *(Transaction *)(courant->info);
+                    courant = courant->next;
+                }
+            }
+            
+            merkle_root(tab_tx, bloc->nbTx, (char*)bloc->merkleTree);
+            
+            // On libère le tableau temporaire pour éviter les fuites mémoire
+            free(tab_tx);
+            printf("Arbre de Merkle calculé : %s\n", bloc->merkleTree);
+        }
+    }
+
     //--- creation de la chaîne de comparaison (ex: "0000" si difficulté = 4)
     char diff_str[difficulty + 1];
 
@@ -29,7 +55,7 @@ void mine_block(Block *bloc, int difficulty) {
     
     diff_str[difficulty] = '\0';
 
-    printf("Minage du bloc en cours...\n");
+    printf("Minage du bloc %d en cours...\n", bloc->index);
 
     while (!success) { //"tant que on a pas trouver un bon hash"
 
@@ -52,7 +78,8 @@ void mine_block(Block *bloc, int difficulty) {
             // On enregistre le hash trouve dans le bloc
             strncpy((char*)bloc->blockHash, hash_res, HASHLENGTH);
 
-            printf("Bloc %d miné ! Hash: %s | Nonce: %ld\n", bloc->index, hash_res, bloc->nonce);} else {
+            printf("Bloc %d miné ! Hash: %s | Nonce: %ld\n", bloc->index, hash_res, bloc->nonce);
+        } else {
 
             bloc->nonce++; // On incremente et on recommence
         }
