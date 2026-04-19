@@ -65,6 +65,7 @@ void create_nouveau_bloc(Blockchain *bc) {
 
 
 
+
 //--- mining (hash) ---
 void mine_block(Block *bloc, int difficulty) {
 
@@ -80,29 +81,15 @@ void mine_block(Block *bloc, int difficulty) {
     int success = 0; //pour touver le hash valide (difficulty = 4)
 
 
-    // --- Calcul du Merkle Root si on a des transactions ---
+   // --- Calcul du Merkle Root si on a des transactions ---
     // Si c'est le bloc Genesis, nbTx vaut 0 donc on saute cette étape.
     if (bloc->nbTx > 0 && bloc->transactions != NULL) {
         
-        // On alloue un tableau temporaire pour la fonction merkle_root
-        Transaction *tab_tx = malloc(bloc->nbTx * sizeof(Transaction));
-        if (tab_tx != NULL) {
-            Slist *courant = bloc->transactions;
-            
-            // On copie le contenu de la Slist dans le tableau
-            for (int i = 0; i < bloc->nbTx; i++) {
-                if (courant != NULL && courant->info != NULL) {
-                    tab_tx[i] = *(Transaction *)(courant->info);
-                    courant = courant->next;
-                }
-            }
-            
-            merkle_root(tab_tx, bloc->nbTx, (char*)bloc->merkleTree);
-            
-            // On libère le tableau temporaire pour éviter les fuites mémoire
-            free(tab_tx);
-            printf("Arbre de Merkle calculé : %s\n", bloc->merkleTree);
-        }
+        // CORRECTION ICI : On passe directement la Slist* (bloc->transactions) !
+        // Plus besoin de malloc, de boucle, ni de free.
+        merkle_root(bloc->transactions, bloc->nbTx, (char*)bloc->merkleTree);
+        
+        printf("Arbre de Merkle calcule : %s\n", bloc->merkleTree);
     }
 
     //--- creation de la chaîne de comparaison (ex: "0000" si difficulté = 4)

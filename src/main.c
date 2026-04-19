@@ -22,10 +22,10 @@ int main() {
     do {
         printf("\n================ MENU PRINCIPAL ================\n");
         printf("1. Creer la blockchain, la genesis, les utilisateurs\n");
-        printf("2. Creer une transaction\n");
-        printf("3. Verifier la coherence de la blockchain\n");
+        printf("2. Lancer l'helicopter money (Distribution initiale)\n");
+        printf("3. Creer une transaction\n");
         printf("4. Sauver la blockchain au format json\n");
-        printf("5. Lancer l'helicopter money (Distribution initiale)\n");
+        printf("5. Verifier la coherence de la blockchain\n");
         printf("6. Afficher les utilisateurs\n");
         printf("7. Quitter\n");
         printf("================================================\n");
@@ -68,6 +68,24 @@ int main() {
                 break;
 
             case 2:
+            printf("\n--- HELICOPTER MONEY ---\n");
+                if (ma_monnaie == NULL || ma_liste_users.nb_users == 0) {
+                    printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
+                } 
+                else if (helicopter_deja_lance == 1) {
+                    printf("[Erreur] L'Helicopter Money a déjà été distribué.\n");
+                } 
+                else {
+                    
+                    run_helicopter_money(&ma_liste_users, ma_monnaie);
+                    helicopter_deja_lance = 1; 
+                    printf("[Succes] Distribution de l'helicopter money realisee.\n\n");
+                    afficher_users(ma_liste_users);
+                }
+                break;
+                
+
+            case 3:
                 //transaction entre utilisateurs
                 printf("\n--- NOUVELLE TRANSACTION ---\n");
                 if (ma_monnaie == NULL || ma_liste_users.nb_users == 0) {
@@ -120,24 +138,15 @@ int main() {
                 }
                 
                 //solde des comptes maj
-                ma_liste_users.users[idx_emetteur].solde -= montant;
-                ma_liste_users.users[idx_beneficiaire].solde += montant;
+                int resultat = create_transaction(&ma_liste_users, ma_monnaie->bc, emetteur, beneficiaire, montant);
 
-                printf("\n[Succes] Transaction validee : %s a envoye %ld BT a %s.\n", emetteur, montant, beneficiaire);
-                break;
-
-            case 3:
-                printf("\n--- VERIFICATION DE LA BLOCKCHAIN ---\n");
-                if (ma_monnaie == NULL) {
-                    printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
+                if (resultat == 1) {
+                    printf("\n[Succes] Transaction enregistree en attente dans le bloc !\n");
                 } else {
-                    if (verification_blockchain(ma_monnaie->bc)) {
-                        printf("[Succes] La blockchain est parfaitement coherente.\n");
-                    } else {
-                        printf("[Erreur] Corruption detectee dans la blockchain.\n");
-                    }
+                    printf("\n[Erreur] La transaction a ete refusee.\n");
                 }
                 break;
+                
 
             case 4:
                 printf("\n--- EXPORT JSON ---\n");
@@ -159,19 +168,16 @@ int main() {
                 break;
 
             case 5:
-                printf("\n--- HELICOPTER MONEY ---\n");
-                if (ma_monnaie == NULL || ma_liste_users.nb_users == 0) {
+                
+                printf("\n--- VERIFICATION DE LA BLOCKCHAIN ---\n");
+                if (ma_monnaie == NULL) {
                     printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
-                } 
-                else if (helicopter_deja_lance == 1) {
-                    printf("[Erreur] L'Helicopter Money a déjà été distribué.\n");
-                } 
-                else {
-                    
-                    run_helicopter_money(&ma_liste_users, ma_monnaie);
-                    helicopter_deja_lance = 1; 
-                    printf("[Succes] Distribution de l'helicopter money realisee.\n\n");
-                    afficher_users(ma_liste_users);
+                } else {
+                    if (verification_blockchain(ma_monnaie->bc)) {
+                        printf("[Succes] La blockchain est parfaitement coherente.\n");
+                    } else {
+                        printf("[Erreur] Corruption detectee dans la blockchain.\n");
+                    }
                 }
                 break;
             
