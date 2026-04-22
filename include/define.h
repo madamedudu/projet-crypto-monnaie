@@ -18,7 +18,7 @@
 #define DIFFICULTY 4 // difficulté pour le minage
 #define INITIALREWARD 50*1000 // montant de départ de la récompence des mineurs
 #define HELIREWARD 50*1000 // montant de l'helicopter money
-#define MAX_USERS 3 // nb utilisateurs (tests)
+#define MAX_USERS 15 // nb utilisateurs (tests)
 #define LOCK_SCRIPT_SIZE 4 // (parties 2 et 3)
 #define UNLOCK_SCRIPT_SIZE 3 // (parties 2 et 3)
 #define FEE_RATE 5 //%
@@ -104,18 +104,25 @@ typedef struct account {
 
 
 //Modification eleve
-
-//Structure de données pour un utilisateur
+//modification (chirine)
+//ajout de la liste d'account
 typedef struct {
-    char adresse[ADRESS_SIZE];  //identifiant de l'utilisateur
-    double solde; //c'est la solde du compte (wallet) de l'utilisateur
-} User;
+    struct account *accounts; //utilise la structure 'account' du prof
+    int nb_accounts;
+} ListeAccounts;
 
-// Structure qui contient la liste des utilisateurs
-typedef struct {
-    User* users;
-    int nb_users;
-} ListeUsers;
+
+// //Structure de données pour un utilisateur
+// typedef struct {
+//     char adresse[ADRESS_SIZE];  //identifiant de l'utilisateur
+//     double solde; //c'est la solde du compte (wallet) de l'utilisateur
+// } User;
+
+// // Structure qui contient la liste des utilisateurs
+// typedef struct {
+//     User* users;
+//     int nb_users;
+// } ListeUsers;
 
 
 #endif // __BC_DEFINES__

@@ -8,14 +8,16 @@
 #include "bloc.h"
 #include "transaction.h"
 #include "utils.h" 
+#include "utxo.h" 
+#include "marche.h" 
 
 //on essaye de voir si ça git pull ce main
 int main() {
     printf("\n========== DEMARRAGE SYSTEME BLOCKCHAIN ==========\n");
 
     currency_t *ma_monnaie = NULL;
-    ListeUsers ma_liste_users;
-    ma_liste_users.nb_users = 0;
+    ListeAccounts ma_liste_accounts;
+    ma_liste_accounts.nb_accounts = 0;
     int helicopter_deja_lance = 0; //faux pour l'instant
     int choix = 0;
 
@@ -27,12 +29,13 @@ int main() {
         printf("4. Sauver la blockchain au format json\n");
         printf("5. Verifier la coherence de la blockchain\n");
         printf("6. Afficher les utilisateurs\n");
-        printf("7. Quitter\n");
+        printf("7. consulter registre utxo\n");
+        printf("8. Quitter\n");
         printf("================================================\n");
         
         int saisie_valide = 0;
         while (saisie_valide == 0) {
-            printf("Votre choix (1-7) : ");
+            printf("Votre choix (1-8) : ");
             
             //gestion de l'erreur si l'utilisateur tape une lettre
             if (scanf("%d", &choix) != 1) {
@@ -40,7 +43,7 @@ int main() {
                 printf("[Erreur] Veuillez entrer un chiffre entier.\n");
             } 
             //gestion de l'erreur si le chiffre est hors limites (1 a 6)
-            else if (choix < 1 || choix > 7) {
+            else if (choix < 1 || choix > 8) {
                 printf("[Erreur] Veuillez entrer un chiffre entre 1 et 6.\n");
             } 
             else {
@@ -51,25 +54,33 @@ int main() {
         switch (choix) {
             
             case 1:
-                printf("\n--- INITIALISATION ---\n");
-                if (ma_monnaie == NULL) {
-                    ma_monnaie = init_currency(); 
-                    if (ma_monnaie != NULL) {
-                        ma_liste_users = generer_users(MAX_USERS); 
-                        
-                        printf("[Succes] Blockchain, bloc Genesis et %d utilisateurs crees.\n\n", ma_liste_users.nb_users);
-                        afficher_users(ma_liste_users);
-                    } else {
-                        printf("[Erreur] Echec de l'initialisation.\n");
-                    }
-                } else {
-                    printf("[Info] La blockchain est deja initialisee.\n");
+            //MODIFICATIONS POUR ACCOUNTS
+                printf("\n--- INITIALISATION BLOCKCHAIN ET UTILISATEURS ---\n");
+                if (ma_monnaie != NULL) {
+                    printf("[Info] La blockchain existe deja.\n");
+                    break;
+                }
+                
+                ma_monnaie = init_currency();
+                
+                int nb_comptes = 0;
+                printf("Combien d'utilisateurs voulez-vous generer ? (Max %d) : ", MAX_USERS);
+                if (scanf("%d", &nb_comptes) != 1) {
+                    while(getchar() != '\n'); // vide le buffer en cas d'erreur de saisie
+                    printf("Erreur de saisie.\n");
+                    break;
+                }
+                
+                ma_liste_accounts = generer_accounts(nb_comptes);
+                
+                if (ma_liste_accounts.nb_accounts > 0) {
+                    printf("[Succes] %d utilisateurs crees !\n", ma_liste_accounts.nb_accounts);
                 }
                 break;
 
             case 2:
             printf("\n--- HELICOPTER MONEY ---\n");
-                if (ma_monnaie == NULL || ma_liste_users.nb_users == 0) {
+                if (ma_monnaie == NULL ||ma_liste_accounts.nb_accounts == 0) {
                     printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
                 } 
                 else if (helicopter_deja_lance == 1) {
@@ -77,10 +88,10 @@ int main() {
                 } 
                 else {
                     
-                    run_helicopter_money(&ma_liste_users, ma_monnaie);
+                    run_helicopter_money(&ma_liste_accounts, ma_monnaie);
                     helicopter_deja_lance = 1; 
                     printf("[Succes] Distribution de l'helicopter money realisee.\n\n");
-                    afficher_users(ma_liste_users);
+                    afficher_accounts(ma_liste_accounts);
                 }
                 break;
                 
@@ -88,15 +99,15 @@ int main() {
             case 3:
                 //transaction entre utilisateurs
                 printf("\n--- NOUVELLE TRANSACTION ---\n");
-                if (ma_monnaie == NULL || ma_liste_users.nb_users == 0) {
+                if (ma_monnaie == NULL || ma_liste_accounts.nb_accounts == 0) {
                     printf("[Erreur] Veuillez d'abord creer la blockchain et les utilisateurs (Option 1).\n");
                     break;
                 }
 
                 //affiche la liste des users
                 printf("\n-- Utilisateurs enregistres --\n");
-                for (int i = 0; i < ma_liste_users.nb_users; i++) {
-                    printf("- %s (Solde : %ld BT)\n", ma_liste_users.users[i].adresse, (long)ma_liste_users.users[i].solde);
+                for (int i = 0; i < ma_liste_accounts.nb_accounts; i++) {
+                    printf("- %s (Solde : %ld BT)\n", ma_liste_accounts.accounts[i].str, ma_liste_accounts.accounts[i].balance); //modification
                 }
                 printf("------------------------------\n");
 
@@ -104,49 +115,28 @@ int main() {
                 char beneficiaire[MAX_STRING];
                 long montant;
 
-                //saisi des info trans
                 printf("Entrez le nom de l'emetteur : ");
-                scanf("%49s", emetteur);
+                scanf("%63s", emetteur);
                 
                 printf("Entrez le nom du beneficiaire : ");
-                scanf("%49s", beneficiaire);
+                scanf("%63s", beneficiaire);
                 
                 printf("Entrez le montant : ");
                 if (scanf("%ld", &montant) != 1) {
                     while(getchar() != '\n'); 
-                    printf("[Erreur] Saisie du montant invalide. Annulation de la transaction.\n");
+                    printf("[Erreur] Saisie du montant invalide.\n");
                     break;
                 }
 
-                //Verification si les emetteurs et benef existent ds le tab
-                int idx_emetteur = -1;
-                int idx_beneficiaire = -1;
-                
-                for (int i = 0; i < ma_liste_users.nb_users; i++) {
-                    if (strcmp(emetteur, ma_liste_users.users[i].adresse) == 0) idx_emetteur = i;
-                    if (strcmp(beneficiaire, ma_liste_users.users[i].adresse) == 0) idx_beneficiaire = i;
-                }
-
-                if (idx_emetteur == -1 || idx_beneficiaire == -1) {
-                    printf("[Erreur] L'emetteur ou le beneficiaire n'existe pas. Annulation de la transaction.\n");
-                    break;
-                }
-
-                if (montant <= 0 || ma_liste_users.users[idx_emetteur].solde < montant) {
-                    printf("[Erreur] Solde insuffisant. Annulation de la transaction.\n");
-                    break;
-                }
-                
-                //solde des comptes maj
-                int resultat = create_transaction(&ma_liste_users, ma_monnaie->bc, emetteur, beneficiaire, montant);
+                int resultat = create_transaction(&ma_liste_accounts, ma_monnaie->bc, emetteur, beneficiaire, montant); // <--- MODIFIÉ ICI
 
                 if (resultat == 1) {
-                    printf("\n[Succes] Transaction enregistree en attente dans le bloc !\n");
+                    printf("\n[Succes] Transaction enregistree !\n");
                 } else {
                     printf("\n[Erreur] La transaction a ete refusee.\n");
                 }
                 break;
-                
+
 
             case 4:
                 printf("\n--- EXPORT JSON ---\n");
@@ -183,14 +173,22 @@ int main() {
             
             case 6:
                 
-                if (ma_liste_users.nb_users == 0) {
+                if (ma_liste_accounts.nb_accounts == 0) {
                     printf("[Info] Aucun utilisateur n'est enregistré.\n");
                 } else {
-                    afficher_users(ma_liste_users);
+                    afficher_accounts(ma_liste_accounts);
                 }
                 break;
-
-            case 7:
+            
+            case 7: // NOUVELLE OPTION
+                printf("\n--- CONSULTATION DU REGISTRE UTXO ---\n");
+                if (global_utxo_list == NULL) {
+                    printf("[Info] Le registre est vide. Lancez l'Helicopter Money d'abord.\n");
+                } else {
+                    afficher_utxo_global();
+                }
+                break;
+            case 8:
                 printf("\nFermeture du programme.\n");
                 return 0;
         }
@@ -202,7 +200,7 @@ int main() {
             printf("------------------------------------------------\n");
         }
 
-    } while (choix != 7);
+    } while (choix != 8);
 
     return 0;
 }

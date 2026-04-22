@@ -4,10 +4,11 @@
 #include "utils.h"     
 
 //afficher tout les comptes avec leur soldes dans la console
-void afficher_users(ListeUsers liste) {
-    printf("----- LISTE DES UTILISATEURS :-----\n");
-    for (int i = 0; i < liste.nb_users; i++) {
-        printf("%s : %.2f BT\n", liste.users[i].adresse, liste.users[i].solde);
+//----------MODIFICATION CHIRINE------------
+void afficher_accounts(ListeAccounts liste) {
+    printf("----- LISTE DES COMPTES :-----\n");
+    for (int i = 0; i < liste.nb_accounts; i++) {
+        printf("%s : %ld BT\n", liste.accounts[i].str, liste.accounts[i].balance);
     }
     printf("----------------------------------\n");
 }
