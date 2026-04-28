@@ -4,64 +4,100 @@
 #include "transaction.h"
 #include "bloc.h"
 #include "define.h"
+#include "utxo.h"
 
-ListeUsers generer_users(int nombre) {
-    ListeUsers liste;
+// ListeUsers generer_users(int nombre) {
+//     ListeUsers liste;
+
+//     if(nombre <= 0 || nombre > MAX_USERS){
+//         printf("Le nombre n'est pas valide\n");
+//         liste.users = NULL;
+//         liste.nb_users = 0;
+//         return liste;
+//     }
+
+//     liste.users = malloc(nombre * sizeof(User));
+//     if (liste.users == NULL){
+//         printf("Erreur allocation mémoire\n");
+//         liste.nb_users = 0;
+//         return liste;
+//     }
+
+//     liste.nb_users = nombre;
+
+//     //pour chaque utilisateur, on lui donne un identifiant et on initialise son solde à 0
+//     for (int i = 0; i < nombre; i++){
+//         snprintf(liste.users[i].adresse, 50, "USER_%d", i + 1);
+//         liste.users[i].solde = 0;
+//     }
+
+//     return liste;
+// } 
+
+//------------------------------MODIFICATIONS CHIRINE PHASE 2------------------------------
+
+//fonction pour générer une liste d'utilisateurs mais de struct type  ACCOUNT
+ListeAccounts generer_accounts(int nombre) {
+    ListeAccounts liste;
 
     if(nombre <= 0 || nombre > MAX_USERS){
-        printf("Le nombre n'est pas valide\n");
-        liste.users = NULL;
-        liste.nb_users = 0;
+        printf("Le nombre n'est pas valide\\n");
+        liste.accounts = NULL;
+        liste.nb_accounts = 0;
         return liste;
     }
 
-    liste.users = malloc(nombre * sizeof(User));
-    if (liste.users == NULL){
-        printf("Erreur allocation mémoire\n");
-        liste.nb_users = 0;
+    liste.accounts = malloc(nombre * sizeof(struct account));
+    if (liste.accounts == NULL){
+        printf("Erreur allocation mémoire\\n");
+        liste.nb_accounts = 0;
         return liste;
     }
 
-    liste.nb_users = nombre;
+    liste.nb_accounts = nombre;
 
     //pour chaque utilisateur, on lui donne un identifiant et on initialise son solde à 0
     for (int i = 0; i < nombre; i++){
-        snprintf(liste.users[i].adresse, 50, "USER_%d", i + 1);
-        liste.users[i].solde = 0;
+        // On utilise les champs 'str' et 'balance' de la struct du prof
+        snprintf(liste.accounts[i].str, 50, "USER_%d", i + 1);
+        liste.accounts[i].balance = 0;
+        liste.accounts[i].utxoList = NULL; // Liste UTXO vide au depart
     }
 
     return liste;
-} 
+}
 
-
-int create_transaction(ListeUsers *liste_utilisateurs, Blockchain *bc, char *donneur, char *receuver, long montant){
+int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *donneur, char *receuver, long montant){
     if (liste_utilisateurs == NULL || bc == NULL) return 0;
 
 
 //-------------------------------GESTION USER----------------------------------------
 
     //On recherche les users dans la liste des users et on les stockent dans nos variables
-    User *user_donne = NULL;
-    User *user_recoit = NULL;
-    for (int i = 0; i < liste_utilisateurs->nb_users; i++){
-        if (strcmp(liste_utilisateurs->users[i].adresse, donneur) == 0) user_donne = &liste_utilisateurs->users[i];
-        if (strcmp(liste_utilisateurs->users[i].adresse, receuver) == 0) user_recoit = &liste_utilisateurs->users[i];
+    struct account *account_donne = NULL;
+    struct account *account_recoit = NULL;
+    
+    // On cherche avec .str au lieu de .adresse
+    for (int i = 0; i < liste_utilisateurs->nb_accounts; i++){
+        if (strcmp(liste_utilisateurs->accounts[i].str, donneur) == 0) account_donne = &liste_utilisateurs->accounts[i];
+        if (strcmp(liste_utilisateurs->accounts[i].str, receuver) == 0) account_recoit = &liste_utilisateurs->accounts[i];
     }
-
-    if (user_donne == NULL || user_recoit == NULL){
+    //modif user -> account
+    if (account_donne == NULL || account_recoit == NULL){
         printf("L'utilisateur n'existe pas\n");
         return 0;
     }
 
     //On vérifie si l'utilisateur qui donne à assez de solde dans sa wallet
-    if (user_donne->solde < montant){
+    //modif user -> account
+    if (account_donne->balance < montant){
         printf("L'utilisateur n'a pas assez de solde\n");
         return 0;
     }
 
-    //On met a jour les wallets des deux users
-    user_donne->solde -= montant;
-    user_recoit->solde += montant;
+    //On met a jour les wallets des deux users 
+    account_donne->balance -= montant; //modif user -> account
+    account_recoit->balance += montant; //modif user -> account
 
 
 //-------------------------------INFORMATION TRANSACTION----------------------------------------
@@ -129,15 +165,13 @@ int create_transaction(ListeUsers *liste_utilisateurs, Blockchain *bc, char *don
 
 
 
-
-
-
-
 /**
  * Créer la transaction d'Helicopter Money
  * Adapte l'adresse de destination en fonction de la structure User
  * Distribue le montant initial à tous les utilisateurs.
  */
+
+//---------Modification Chirine---------
 Transaction create_helicopter_transaction(char *dest_address) {
     Transaction trans;
 
@@ -154,12 +188,26 @@ Transaction create_helicopter_transaction(char *dest_address) {
     trans.timestamp = time(NULL);
     strncpy(trans.comment, "Helicopter Money", MAX_STRING);
 
+//à finir ici
     // initialisation : phase 2
     trans.nbInputs = 0;
     trans.lstInputs = NULL;
-    trans.nbOutputs = 0;
-    trans.lstOutputs = NULL;
-
+    trans.nbOutputs = 1;
+    //fonction pour créer output
+    TxOutputs *nouveau_output = creer_output(HELIREWARD, dest_address);
+    if (nouveau_output != NULL) {
+        //nœud Slist pour la liste lstOutputs de la transaction
+        struct Slist *noeud = malloc(sizeof(struct Slist));
+        if (noeud != NULL) {
+            noeud->info = (void *)nouveau_output;
+            noeud->next = NULL;
+            //le billet dans la liste des sorties de la transaction
+            trans.lstOutputs = noeud;
+        } else {
+            printf("[Erreur] Echec malloc noeud transaction.\n");
+    
+        }
+    }
     // calcul : TXID (hash de la transaction)
     char buffer[MAX_BUF];
     sprintf(buffer, "%s%s%ld%ld", 
@@ -174,30 +222,34 @@ Transaction create_helicopter_transaction(char *dest_address) {
 }
 
 
-/**
- * phase globale d'Helicopter Money
- * Utilise la ListeUsers (ListeUsers generer_users(int nombre)) et met à jour la masse monétaire.
- */
-void run_helicopter_money(ListeUsers *liste, currency_t *currency) {
-    printf(" Lancement : Helicopter Money\n");
+
+void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
+    if (liste == NULL || currency == NULL) return;
+    printf(" Lancement : Helicopter Money (Phase 2 UTXO)\n");
     
-    // on parcours toute la liste cree par la fct : ListeUsers generer_users(int nombre)
-    for (int i = 0; i < liste->nb_users; i++) {
+    //on parcours toute la liste cree 
+    for (int i = 0; i < liste->nb_accounts; i++) {
         
-        // recu (la transaction)
-        Transaction h_trans = create_helicopter_transaction(liste->users[i].adresse);
+    
+        Transaction h_trans = create_helicopter_transaction(liste->accounts[i].str);
+         if (h_trans.lstOutputs != NULL) {
+            TxOutputs *out = (TxOutputs *)h_trans.lstOutputs->info;
+            ajouter_utxo(out, (char*)h_trans.txid, 0); 
         
-        // on met à jour le solde (en utilisant le champ .solde de sa struct)
-        liste->users[i].solde += h_trans.txAmount;
-        
-        // on augmente la monnaySupply (l'argent vient d'être créé)
-        currency->moneySupply += h_trans.txAmount;
-        
-        printf("[Coinbase] %d BT envoyés à %s (Nouveau solde: %ld)\n", 
-                HELIREWARD, liste->users[i].adresse, (long)liste->users[i].solde);
+            //MAJ des compteurs pour l'affichage et la simulation
+            liste->accounts[i].balance += h_trans.txAmount;
+            currency->moneySupply += h_trans.txAmount;
+            
+            printf("[Coinbase] Output cree pour %s (TXID court: %.8s)\n", 
+                   liste->accounts[i].str, (char*)h_trans.txid);
+ 
+            
+            //on ne libère PAS ->info (le TxOutputs) car il appartient à global_utxo_list
+            free(h_trans.lstOutputs);
+            h_trans.lstOutputs = NULL;
+        }
     }
     
     printf("fin : Helicopter Money\n");
     printf("Monney Supply total : %ld \n", currency->moneySupply);
 }
-

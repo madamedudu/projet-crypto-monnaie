@@ -3,7 +3,7 @@
 
 #include "define.h"
 
-void afficher_users(ListeUsers liste);
+void afficher_accounts(ListeAccounts liste);
 
 void export_blockchain_json(currency_t *currency, const char *filename);
 

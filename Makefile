@@ -19,7 +19,9 @@ SOURCES = $(SRC_DIR)/main.c \
           $(SRC_DIR)/transaction.c \
           $(SRC_DIR)/utils.c \
           $(SRC_DIR)/sha256.c \
-          $(SRC_DIR)/sha256_utils.c
+          $(SRC_DIR)/sha256_utils.c\
+		  $(SRC_DIR)/utxo.c \
+		  $(SRC_DIR)/marche.c 
 
 # Liste des fichiers objets correspondants
 OBJECTS = $(OBJ_DIR)/main.o \
@@ -28,7 +30,9 @@ OBJECTS = $(OBJ_DIR)/main.o \
           $(OBJ_DIR)/transaction.o \
           $(OBJ_DIR)/utils.o \
           $(OBJ_DIR)/sha256.o \
-          $(OBJ_DIR)/sha256_utils.o
+          $(OBJ_DIR)/sha256_utils.o \
+          $(OBJ_DIR)/utxo.o \
+          $(OBJ_DIR)/marche.o
 
 # Liste des fichiers sources pour les tests (sans main.c)
 TEST_OBJECTS = $(OBJ_DIR)/blockchain.o \
