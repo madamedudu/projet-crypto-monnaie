@@ -20,6 +20,7 @@ int main() {
     ma_liste_accounts.nb_accounts = 0;
     int helicopter_deja_lance = 0; //faux pour l'instant
     int choix = 0;
+    srand(time(NULL));
 
     do {
         printf("\n================ MENU PRINCIPAL ================\n");

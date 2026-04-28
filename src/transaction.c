@@ -5,6 +5,7 @@
 #include "bloc.h"
 #include "define.h"
 #include "utxo.h"
+#include "cryptographie.h"
 
 // ListeUsers generer_users(int nombre) {
 //     ListeUsers liste;
@@ -34,6 +35,16 @@
 //     return liste;
 // } 
 
+
+
+
+
+
+
+
+
+
+
 //------------------------------MODIFICATIONS CHIRINE PHASE 2------------------------------
 
 //fonction pour générer une liste d'utilisateurs mais de struct type  ACCOUNT
@@ -62,10 +73,21 @@ ListeAccounts generer_accounts(int nombre) {
         snprintf(liste.accounts[i].str, 50, "USER_%d", i + 1);
         liste.accounts[i].balance = 0;
         liste.accounts[i].utxoList = NULL; // Liste UTXO vide au depart
+        generer_cles(&liste.accounts[i]);
     }
 
     return liste;
 }
+
+
+
+
+
+
+
+
+
+
 
 int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *donneur, char *receuver, long montant){
     if (liste_utilisateurs == NULL || bc == NULL) return 0;
@@ -95,11 +117,6 @@ int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *
         return 0;
     }
 
-    //On met a jour les wallets des deux users 
-    account_donne->balance -= montant; //modif user -> account
-    account_recoit->balance += montant; //modif user -> account
-
-
 //-------------------------------INFORMATION TRANSACTION----------------------------------------
 
     //On créer une transaction
@@ -116,10 +133,71 @@ int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *
 
     // Calcul TXID
     char buffer[MAX_BUF];
-    sprintf(buffer, "%s%s%ld%ld",            donneur, receuver, montant, transaction->timestamp); //on fabrique une chaine unique
+    sprintf(buffer, "%s%s%ld%ld", donneur, receuver, montant, transaction->timestamp); //on fabrique une chaine unique
 
     //On calcule le Hash (c'est l'identifiant de la transaction)
     sha256ofString((BYTE *)buffer, (char*)transaction->txid);
+
+    //-------------SIGNATURE--------------------
+    BYTE signature[HASHLENGTH];
+    signer_transaction(transaction, account_donne->priv_key, signature);
+
+    //---------------- INPUT ----------------
+    Utxo *utxo = NULL;
+    Slist *courant = global_utxo_list;
+
+    while (courant != NULL) {
+        Utxo *u = (Utxo*) courant->info;
+
+        if (strcmp(u->txOut->lockingScript[0], donneur) == 0 && u->txOut->amount >= montant) {
+            utxo = u;
+            break;
+        }
+        courant = courant->next;
+    }
+
+    if (utxo == NULL) {
+        printf("Aucun UTXO disponible pour %s\n", donneur);
+        return 0;
+    }
+
+    TxInputs *input = malloc(sizeof(TxInputs));
+    memset(input, 0, sizeof(TxInputs));
+
+    strcpy((char*)input->txHash, (char*)utxo->hash);
+    input->indexOutput = utxo->indexOutput;
+
+    creer_unlock_script(input, signature, (BYTE*)donneur);
+
+    // ajout à la liste des inputs
+    Slist *node_input = malloc(sizeof(Slist));
+    node_input->info = input;
+    node_input->next = NULL;
+
+    transaction->lstInputs = node_input;
+    transaction->nbInputs = 1;
+
+    //---------------- OUTPUT ----------------
+    TxOutputs *output = creer_output(montant, receuver);
+    
+
+    //ajout à la liste des outputs
+    Slist *node_output = malloc(sizeof(Slist));
+    node_output->info = output;
+    node_output->next = NULL;
+
+    transaction->lstOutputs = node_output;
+    transaction->nbOutputs = 1;
+
+    supprimer_utxo((char*)utxo->hash, utxo->indexOutput);
+
+    ajouter_utxo(output, (char*)transaction->txid, 0);
+
+//-----------------------------MISE A JOUR DES SOLDES--------------------------------------------
+
+    //On met a jour les wallets des deux users 
+    account_donne->balance -= montant; //modif user -> account
+    account_recoit->balance += montant; //modif user -> account
 
 
 //-------------------------------INSERTION DANS LE BLOC----------------------------------------
@@ -162,6 +240,15 @@ int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *
 
     return 1;
 }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -220,6 +307,18 @@ Transaction create_helicopter_transaction(char *dest_address) {
 
     return trans;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
