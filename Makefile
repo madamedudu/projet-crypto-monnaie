@@ -34,7 +34,7 @@ OBJECTS = $(OBJ_DIR)/main.o \
           $(OBJ_DIR)/sha256_utils.o \
           $(OBJ_DIR)/utxo.o \
           $(OBJ_DIR)/marche.o \
-		  $(SRC_DIR)/cryptographie.o
+		  $(OBJ_DIR)/cryptographie.o
 
 # Liste des fichiers sources pour les tests (sans main.c)
 TEST_OBJECTS = $(OBJ_DIR)/blockchain.o \
