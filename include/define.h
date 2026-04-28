@@ -103,13 +103,19 @@ typedef struct account {
 } Account;
 
 
-//Modification eleve
+//MODIFICATION ELEVE
 //modification (chirine)
 //ajout de la liste d'account
 typedef struct {
     struct account *accounts; //utilise la structure 'account' du prof
     int nb_accounts;
 } ListeAccounts;
+
+typedef struct s_TxInputs {
+    BYTE txHash[HASHLENGTH];   //hash de la transaction source
+    int indexOutput;           //index de l’output utilisé
+    char *unlockingScript[UNLOCK_SCRIPT_SIZE];
+} TxInputs;
 
 
 // //Structure de données pour un utilisateur
