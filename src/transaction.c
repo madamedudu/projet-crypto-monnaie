@@ -38,6 +38,17 @@
 
 
 
+// Fonction utilitaire
+Slist* inserer_en_tete(Slist *liste, void *data) {
+    Slist *nouveau = malloc(sizeof(Slist));
+    if (!nouveau) return liste;
+    nouveau->info = data;
+    nouveau->next = liste;
+    return nouveau;
+}
+
+
+
 
 
 
@@ -87,8 +98,6 @@ ListeAccounts generer_accounts(int nombre) {
 
 
 
-
-
 int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *donneur, char *receuver, long montant){
     if (liste_utilisateurs == NULL || bc == NULL) return 0;
 
@@ -110,10 +119,18 @@ int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *
         return 0;
     }
 
+    // On applique le taux de 5% défini dans define.h (Zyad)
+    long frais = (montant * FEE_RATE) / 100; 
+    long total_a_payer = montant + frais;
+    long somme_accumulee = 0;
+
     //On vérifie si l'utilisateur qui donne à assez de solde dans sa wallet
     //modif user -> account
-    if (account_donne->balance < montant){
-        printf("L'utilisateur n'a pas assez de solde\n");
+    //ajout algorithme glouton pour sélectionner les UTXO à utiliser pour la transaction
+    
+    Slist *utxos_choisis = select_utxos_greedy(account_donne->str, total_a_payer, &somme_accumulee);
+    if (utxos_choisis == NULL) {
+        printf("L'utilisateur %s n'a pas assez de solde (Besoin total: %ld BT)\n", donneur, total_a_payer);
         return 0;
     }
 
@@ -142,61 +159,52 @@ int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *
     BYTE signature[HASHLENGTH];
     signer_transaction(transaction, account_donne->priv_key, signature);
 
-    //---------------- INPUT ----------------
-    Utxo *utxo = NULL;
-    Slist *courant = global_utxo_list;
+    //---------------- INPUT ---------------- (modife Zyad)
+    Slist *curr = utxos_choisis;
+    while (curr != NULL) {
+        Utxo *u = (Utxo*)curr->info;
+        
+        TxInputs *input = malloc(sizeof(TxInputs));
+        memset(input, 0, sizeof(TxInputs));
+        
+        strcpy((char*)input->txHash, (char*)u->hash);
+        input->indexOutput = u->indexOutput;
+        
+        // On déverrouille le billet avec la signature
+        creer_unlock_script(input, signature, (BYTE*)donneur);
 
-    while (courant != NULL) {
-        Utxo *u = (Utxo*) courant->info;
+        // Ajout à la liste des entrées de la transaction
+        transaction->lstInputs = inserer_en_tete(transaction->lstInputs, input);
+        transaction->nbInputs++;
 
-        if (strcmp(u->txOut->lockingScript[0], donneur) == 0 && u->txOut->amount >= montant) {
-            utxo = u;
-            break;
-        }
-        courant = courant->next;
+        // On retire le billet du registre global puisqu'il est utilisé
+        supprimer_utxo((char*)u->hash, u->indexOutput);
+        
+        curr = curr->next;
     }
 
-    if (utxo == NULL) {
-        printf("Aucun UTXO disponible pour %s\n", donneur);
-        return 0;
-    }
-
-    TxInputs *input = malloc(sizeof(TxInputs));
-    memset(input, 0, sizeof(TxInputs));
-
-    strcpy((char*)input->txHash, (char*)utxo->hash);
-    input->indexOutput = utxo->indexOutput;
-
-    creer_unlock_script(input, signature, (BYTE*)donneur);
-
-    // ajout à la liste des inputs
-    Slist *node_input = malloc(sizeof(Slist));
-    node_input->info = input;
-    node_input->next = NULL;
-
-    transaction->lstInputs = node_input;
-    transaction->nbInputs = 1;
-
-    //---------------- OUTPUT ----------------
-    TxOutputs *output = creer_output(montant, receuver);
-    
-
-    //ajout à la liste des outputs
-    Slist *node_output = malloc(sizeof(Slist));
-    node_output->info = output;
-    node_output->next = NULL;
-
-    transaction->lstOutputs = node_output;
+    //---------------- OUTPUT ---------------- (modife Zyad)
+    // Le paiement pour le destinataire
+    TxOutputs *out_dest = creer_output(montant, receuver);
+    transaction->lstOutputs = inserer_en_tete(NULL, out_dest);
     transaction->nbOutputs = 1;
+    ajouter_utxo(out_dest, (char*)transaction->txid, 0);
 
-    supprimer_utxo((char*)utxo->hash, utxo->indexOutput);
+    // Le change (Monnaie rendue au donneur)
+    long monnaie_rendue = somme_accumulee - total_a_payer;
+    if (monnaie_rendue > 0) {
+        TxOutputs *out_change = creer_output(monnaie_rendue, donneur);
+        transaction->lstOutputs = inserer_en_tete(transaction->lstOutputs, out_change);
+        transaction->nbOutputs++;
+        
+        // Le donneur récupère ce nouveau billet dans son portefeuille
+        ajouter_utxo(out_change, (char*)transaction->txid, 1);
+    }
 
-    ajouter_utxo(output, (char*)transaction->txid, 0);
-
-//-----------------------------MISE A JOUR DES SOLDES--------------------------------------------
+//-----------------------------MISE A JOUR DES SOLDES-------------------------------------- (modife Zyad)
 
     //On met a jour les wallets des deux users 
-    account_donne->balance -= montant; //modif user -> account
+    account_donne->balance -= total_a_payer; //modif user -> account
     account_recoit->balance += montant; //modif user -> account
 
 
@@ -237,14 +245,15 @@ int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *
         mine_block(dernier_bloc, bc->difficulty);
         create_nouveau_bloc(bc);
     }
+    //libération de la mémoire pour la liste des UTXO choisis
+    while (utxos_choisis != NULL) {
+        Slist *temp = utxos_choisis;
+        utxos_choisis = utxos_choisis->next;
+        free(temp); 
+    }
 
     return 1;
 }
-
-
-
-
-
 
 
 
@@ -311,17 +320,6 @@ Transaction create_helicopter_transaction(char *dest_address) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
     if (liste == NULL || currency == NULL) return;
     printf(" Lancement : Helicopter Money (Phase 2 UTXO)\n");
@@ -351,4 +349,61 @@ void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
     
     printf("fin : Helicopter Money\n");
     printf("Monney Supply total : %ld \n", currency->moneySupply);
+}
+
+
+// Crée une transaction incomplète (Emetteur, Destinataire, Montant, Inputs)
+Transaction* create_incomplete_transaction(Account *compte_donneur, char *nom_receveur, long montant) {
+    long accumule = 0;
+
+    // On sélectionne les billets (Inputs) via le glouton
+    Slist *inputs_choisis = select_utxos_greedy(compte_donneur->str, montant, &accumule);
+    
+    if (inputs_choisis == NULL) {
+        return NULL; // Fonds insuffisants
+    }
+
+    //On alloue et on remplit la transaction
+    Transaction *tx = malloc(sizeof(Transaction));
+    memset(tx, 0, sizeof(Transaction));
+
+    strncpy((char*)tx->adSender, compte_donneur->str, HASHLENGTH);
+    strncpy((char*)tx->adReceiver, nom_receveur, HASHLENGTH);
+    tx->txAmount = montant;
+
+    tx->lstInputs = inputs_choisis;
+    
+    // On laisse txid, timestamp et lstOutputs vides pour le mineur
+    return tx;
+}
+
+// Générateur aléatoire de transactions 
+void generer_transaction_aleatoire(ListeAccounts *liste_comptes) {
+    if (liste_comptes == NULL || liste_comptes->nb_accounts < 2){ 
+        return;
+    }
+
+    // Choisir deux utilisateurs différents au hasard
+    int idx_donneur = rand() % liste_comptes->nb_accounts;
+    int idx_receveur;
+    do {
+        idx_receveur = rand() % liste_comptes->nb_accounts;
+    } while (idx_donneur == idx_receveur);
+
+    Account *donneur = &liste_comptes->accounts[idx_donneur];
+    char *receveur = liste_comptes->accounts[idx_receveur].str;
+
+    // Choisir un montant aléatoire
+    long montant = (rand() % 100) + 1;
+
+    // Créer la transaction incomplète
+    Transaction *tx = create_incomplete_transaction(donneur, receveur, montant);
+
+    if (tx != NULL) {
+        printf("Nouvelle transaction créée : %s envoie %ld BT à %s\n", 
+               donneur->str, montant, receveur);
+    } else {
+        printf("Échec : %s n'a pas assez de fonds pour %ld BT\n", 
+               donneur->str, montant);
+    }
 }
