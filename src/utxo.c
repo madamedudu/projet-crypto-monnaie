@@ -3,6 +3,7 @@
 #include "define.h"
 
 #include "utxo.h"
+#include "transaction.h"
 
 //voici la liste global
 struct Slist *global_utxo_list = NULL;
@@ -132,6 +133,59 @@ void afficher_utxo_global() {
  
     printf("============================\n");
     printf("Total UTXO non depenses : %d\n\n", i);
+}
+
+// L'algorithme glouton
+Slist* select_utxos_greedy(char *nom_emetteur, long montant_cible, long *somme_recuperee) {
+    if (global_utxo_list == NULL || montant_cible <= 0) return NULL;
+
+    Utxo *best_greater = NULL;
+    long min_greater_val = -1;
+    Slist *selection = NULL;
+    *somme_recuperee = 0;
+
+    // Chercher le "Smallest Greater" (un seul billet qui suffit)
+    struct Slist *courant = global_utxo_list;
+    while (courant != NULL) {
+        Utxo *u = (Utxo *)courant->info;
+        if (u->txOut != NULL && strcmp(u->txOut->lockingScript[0], nom_emetteur) == 0) {
+            if (u->txOut->amount >= montant_cible) {
+                if (min_greater_val == -1 || u->txOut->amount < min_greater_val) {
+                    min_greater_val = u->txOut->amount;
+                    best_greater = u;
+                }
+            }
+        }
+        courant = courant->next;
+    }
+
+    if (best_greater) {
+        *somme_recuperee = best_greater->txOut->amount;
+        return inserer_en_tete(NULL, best_greater);
+    }
+
+    // Accumulation (si aucun billet seul ne suffit)
+    courant = global_utxo_list;
+    while (courant != NULL && *somme_recuperee < montant_cible) {
+        Utxo *u = (Utxo *)courant->info;
+        if (u->txOut != NULL && strcmp(u->txOut->lockingScript[0], nom_emetteur) == 0) {
+            selection = inserer_en_tete(selection, u);
+            *somme_recuperee += u->txOut->amount;
+        }
+        courant = courant->next;
+    }
+
+    // Si on n'a pas assez de fonds, on nettoie la liste temporaire
+    if (*somme_recuperee < montant_cible) {
+        while (selection != NULL) {
+            Slist *tmp = selection;
+            selection = selection->next;
+            free(tmp);
+        }
+        return NULL;
+    }
+
+    return selection;
 }
  
 //-------------NETTOYAGE-----------------------
