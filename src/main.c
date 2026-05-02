@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <signal.h>
 #include "define.h"
 #include "sha256_utils.h"
 #include "blockchain.h"   
@@ -10,6 +11,15 @@
 #include "utils.h" 
 #include "utxo.h" 
 #include "marche.h" 
+
+// Variable globale pour la pause (CTRL C)
+volatile sig_atomic_t pause_flag = 0;
+void handle_sigint(int sig) {
+    (void)sig;
+    pause_flag = 1; // On lève le drapeau de pause
+}
+
+// Dans main() avant de lancer le marché pour brancher l'interruption CTRL C: signal(SIGINT, handle_sigint);
 
 //on essaye de voir si ça git pull ce main
 int main() {

@@ -2,16 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
+#include <signal.h>
 #include "define.h"
 #include "utxo.h"
 #include "blockchain.h"
 #include "sha256_utils.h"
+#include "transaction.h"
+#include "marche.h"
 
 //variables globales
 static int cycleRounds = 0;
 static const int limit = 30; // Nombre de blocs avant la division par 2
 static int nb_halvings = 0;  // Pour le bilan final
-
 
 /* 
  *  Trouver le montant d'un UTXO consommé (pour calculer les frais) 
@@ -55,7 +58,6 @@ long get_input_amount(Blockchain *bc, char *txHash, int index) {
     }
     return 0; 
 }
-
 
 /* 
  * Point 9 : Calculer les frais de minage
@@ -120,7 +122,6 @@ long calculer_frais_bloc(Blockchain *bc, Block *bloc) {
     return total_frais;
 }
 
-
 /* 
  * Point 8, 12, 13 : Recompense, Halving et Bilan Inflation
  *  */
@@ -151,7 +152,6 @@ long calculer_recompense(Blockchain *bc) {
 
     return bc->reward4mining;
 }
-
 
 /* 
  * Point 9 and 11 : Transaction Coinbase et Mise à jour Monnaie
@@ -232,4 +232,79 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address) {
         printf("Nombre de cycles Halving: %d cycles\n", nb_halvings);
         printf("---------------------------------------------------------\n\n");
     }
+}
+
+// Finalise une transaction incomplète 
+void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
+    if (tx == NULL) return;
+
+    //Calcul du montant total des inputs pour définir le change
+    long total_entree = 0;
+    Slist *curr = tx->lstInputs;
+    while (curr) {
+        Utxo *u = (Utxo*)curr->info;
+        total_entree += u->txOut->amount;
+        curr = curr->next;
+    }
+
+    //  Calcul des frais (5%) et du change
+    long frais = (tx->txAmount * FEE_RATE) / 100;
+    long monnaie_rendue = total_entree - tx->txAmount - frais;
+
+    //  Création des Outputs (Paiement + Change)
+    tx->timestamp = time(NULL);
+    
+    //  Destinataire
+    TxOutputs *out_dest = creer_output(tx->txAmount, (char*)tx->adReceiver);
+    tx->lstOutputs = inserer_en_tete(NULL, out_dest);
+    ajouter_utxo(out_dest, (char*)tx->txid, 0); // Index 0
+
+    //  Change (si nécessaire)
+    if (monnaie_rendue > 0) {
+        TxOutputs *out_change = creer_output(monnaie_rendue, donneur->str);
+        tx->lstOutputs = inserer_en_tete(tx->lstOutputs, out_change);
+        ajouter_utxo(out_change, (char*)tx->txid, 1); // Index 1
+        tx->nbOutputs = 2;
+    } else {
+        tx->nbOutputs = 1;
+    }
+
+    // Calcul du Hash Final (TXID)
+    char buffer[MAX_BUF];
+    sprintf(buffer, "%s%s%ld%ld", tx->adSender, tx->adReceiver, tx->txAmount, tx->timestamp);
+    sha256ofString((BYTE *)buffer, (char*)tx->txid);
+}
+
+void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_info) {
+    extern volatile sig_atomic_t pause_flag; // Déclarée dans le main
+
+    printf("Démarrage de la Phase de Marché... (Ctrl+C pour Pause)\n");
+
+    while (bc->reward4mining > 0) { // Arrêt si récompense == 0
+        
+        // --- PAUSE (Ctrl+C) ---
+        if (pause_flag) {
+            printf("\n--- PAUSE ---\n");
+            printf("Masse Monétaire : %ld BT\n", curr_info->moneySupply);
+            printf("Récompense actuelle : %d BT\n", bc->reward4mining);
+            printf("Cycles effectués : %d\n", cycleRounds);
+            
+            printf("1. Reprendre | 2. Quitter : ");
+            int choix;
+            scanf("%d", &choix);
+            if (choix == 2) break;
+            pause_flag = 0;
+            printf("Reprise...\n");
+        }
+
+        //  Générer des transactions aléatoires 
+        for (int i = 0; i < 3; i++) { // On en génère 3 par round
+            generer_transaction_aleatoire(la);
+        }
+
+        usleep(500000); // Petite pause de 0.5s 
+    }
+
+    printf("\n--- FIN ---\n");
+    printf("Total Blocs : %d | Cycles : %d | Masse : %ld\n", bc->nbBlocks, cycleRounds, curr_info->moneySupply);
 }

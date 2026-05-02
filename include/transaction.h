@@ -11,5 +11,7 @@ void run_helicopter_money(ListeAccounts *liste, currency_t *currency);
 //ajouts phase 2
 ListeAccounts generer_accounts(int nombre);
 int create_transaction(ListeAccounts *liste_utilisateurs, Blockchain *bc, char *donneur, char *receuver, long montant);
-
+Slist* inserer_en_tete(Slist *liste, void *data);
+Transaction* create_incomplete_transaction(Account *compte_donneur, char *nom_receveur, long montant);
+void generer_transaction_aleatoire(ListeAccounts *liste_comptes);
 #endif
