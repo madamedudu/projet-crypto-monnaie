@@ -6,7 +6,7 @@
 #include "sha256_utils.h"
 #include "blockchain.h"
  
-//modif par chirine pour empecher que le nv bloc créé rentre dans la blockchain sans veri
+//modif par chirine pour empecher que le nv bloc créé rentre dans la blockchain sans verif
 Block* create_nouveau_bloc(Blockchain *bc) {
     if (bc == NULL || bc->blocklist == NULL) return NULL;
     

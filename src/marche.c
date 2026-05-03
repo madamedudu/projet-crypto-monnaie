@@ -183,7 +183,7 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address) {
     printf("=> TX Coinbase (1ere position) pour %s : %ld BTU (Recompense: %ld, Frais: %ld)\n", 
             miner_address, montant_total, recompense, frais);
 
-    // Point 13 : Détecter la fin de l'inflation et afficher le bilan final
+    
     
 }
 
@@ -303,7 +303,7 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
         strncpy(bloc_a_miner->minerName, mineur->str, MAX_STRING);
         strncpy(bloc_a_miner->comment, "Bloc phase marche", MAX_STRING);
 
-        //finaliser chaque transaction
+        //finalertransaction
         int tx_ajoutees = 0;
         printf("Le mineur rassemble les transactions du memory pool...\n");
         
