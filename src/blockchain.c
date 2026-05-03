@@ -1,5 +1,7 @@
 #include "sha256_utils.h"
 #include "define.h"
+#include "transaction.h"
+#include "bloc.h" //creation d'un bloc de facon automatique 
 
 // Merkle Root
 // Transforme les données d'une transaction en chaîne puis calcule son SHA256
@@ -61,9 +63,37 @@ void merkle_root(Slist *liste, int nb_tx, char root[65]) {
     // Le résultat final est dans le premier emplacement
     strcpy(root, etage_courant[0]);
 }
-// strcpy(nouveau_bloc->MerkleRoot.HashValue, racine_calculee);
 
-//---- bloc de chainage ----
+
+
+//ajout des transactions au bloc courant 
+int ajouter_transaction_au_bloc_courant(Blockchain *bc, Transaction *tx) {
+    if (bc == NULL || bc->blocklist == NULL || tx == NULL) {
+        return 0;//error
+    }
+    //1 recherche dernier blov
+    struct Slist *curr = bc->blocklist;
+    while (curr->next != NULL) {
+        curr = curr->next;
+    }
+    Block *dernier_bloc = (Block *)curr->info;
+
+    //verif si on a encore de la place par rapport à MAXTX
+    if (dernier_bloc->nbTx >= MAXTX) {
+        printf("\nLe bloc #%d est remplis (%d tx).\n", 
+               dernier_bloc->index, dernier_bloc->nbTx);
+        return 0;//error
+    }
+
+    // 2 ajout transaction
+    
+    dernier_bloc->transactions = inserer_en_tete(dernier_bloc->transactions, tx);
+    dernier_bloc->nbTx++; 
+    printf(" Transaction ajoutée au bloc #%d (%d/%d).\n", dernier_bloc->index, dernier_bloc->nbTx, MAXTX);
+    return 1; // Succès de l'opération
+}
+
+
 
 //on fait d'abord une vérification du bloc genesis, ensuite on vérifie que le hash du bloc courant correspond au hash du bloc précédent
 
@@ -205,4 +235,32 @@ int ajouter_bloc_blockchain(Blockchain *bc, Block *nouveau_bloc, int difficulte)
 
     return 1; 
 }
+//liberer la blockchain
+void liberer_blockchain(Blockchain *bc) {
+    if (bc == NULL) return;
 
+    Slist *bloc_courant = bc->blocklist;
+    while (bloc_courant != NULL) {
+        Block *b = (Block *)bloc_courant->info;
+        
+        // Libérer toutes les transactions du bloc
+        Slist *tx_courante = b->transactions;
+        while (tx_courante != NULL) {
+            Transaction *tx = (Transaction *)tx_courante->info;            
+            // Libérer la transaction et son noeud
+            free(tx);
+            Slist *noeud_tx_a_supprimer = tx_courante;
+            tx_courante = tx_courante->next;
+            free(noeud_tx_a_supprimer);
+        }
+
+        // Libérer le bloc et son noeud
+        free(b);
+        Slist *noeud_bloc_a_supprimer = bloc_courant;
+        bloc_courant = bloc_courant->next;
+        free(noeud_bloc_a_supprimer);
+    }
+    
+    // Libérer la structure blockchain mère
+    free(bc);
+}

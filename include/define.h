@@ -13,7 +13,7 @@
 
 #define MAX_BUF 1024
 #define MAX_STRING 64
-#define MAX_BLOCK 15
+#define MAX_BLOCK 10
 #define MAXTX 10 // nb tx par bloc (tests)
 #define DIFFICULTY 4 // difficulté pour le minage
 #define INITIALREWARD 50*1000 // montant de départ de la récompence des mineurs
@@ -24,7 +24,7 @@
 #define FEE_RATE 5 //%
 #define HALVING 10 // nombre de blocs pour diviser la récompence
 #define HASHLENGTH SHA256_BLOCK_SIZE*2 + 1
-#define MAX_BLOCKS 10 // nombre maximum de blocs dans la blockchain (tests)
+#define MAX_BLOCKS 500 // nombre maximum de blocs dans la blockchain (tests)
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))

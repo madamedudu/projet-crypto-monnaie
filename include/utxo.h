@@ -10,4 +10,5 @@ void afficher_utxo_global();
 void supprimer_utxo(char *txid_source, int index);
 Utxo* rechercher_utxo(char *txid_source, int index);
 Slist* select_utxos_greedy(char *nom_emetteur, long montant_cible, long *somme_recuperee);
+long calculer_solde_reel(struct account *acc);
 #endif
