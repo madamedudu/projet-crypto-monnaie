@@ -1,14 +1,16 @@
 #include <stdio.h>     
 #include <stdlib.h>    
 #include "define.h"    
-#include "utils.h"     
+#include "utils.h"  
+#include "utxo.h"   
 
 //afficher tout les comptes avec leur soldes dans la console
 //----------MODIFICATION CHIRINE------------
 void afficher_accounts(ListeAccounts liste) {
     printf("----- LISTE DES COMPTES :-----\n");
     for (int i = 0; i < liste.nb_accounts; i++) {
-        printf("%s : %ld BT\n", liste.accounts[i].str, liste.accounts[i].balance);
+        long solde = calculer_solde_reel(&liste.accounts[i]); //calcul du solde reel des user lors d'une transaction 
+        printf("%s : %ld BTU\n", liste.accounts[i].str, solde);
     }
     printf("----------------------------------\n");
 }
@@ -30,9 +32,9 @@ void export_blockchain_json(ListeAccounts liste, Blockchain *blockchain, const c
 
     long money = 0;
     for(int i = 0; i < liste.nb_accounts; i++){
-        money += liste.accounts[i].balance;
+        money += calculer_solde_reel(&liste.accounts[i]); //modif chirine valeur exacte des soldes
     }
-    fprintf(file, "\"Money supply\": %d,\n", blockchain->nbBlocks * HELIREWARD);
+    fprintf(file, "\"Money supply\": %ld,\n", money); //vrai money calculée
 
     //---------------------- BLOCKCHAIN -------------------------
     fprintf(file, "\"blockchain\": {\n");
@@ -83,10 +85,10 @@ void export_blockchain_json(ListeAccounts liste, Blockchain *blockchain, const c
 
                 Slist *in = tx->lstInputs;
                 while (in != NULL) {
-                    TxInputs *input = (TxInputs*) in->info;
+                    Utxo *input = (Utxo*) in->info;//liste contient des utxo
 
                     fprintf(file, "      {\n");
-                    fprintf(file, "      \"txid\": \"%s\",\n", input->txHash);
+                    fprintf(file, "      \"txid\": \"%s\",\n", input->hash);
                     fprintf(file, "      \"index\": %d\n", input->indexOutput);
 
                     if (in->next == NULL)

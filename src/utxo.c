@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h> 
 #include "define.h"
-
 #include "utxo.h"
 #include "transaction.h"
+
+
 
 //voici la liste global
 struct Slist *global_utxo_list = NULL;
@@ -20,6 +21,7 @@ TxOutputs* creer_output(long montant, char *nom_destinataire) {
     }
  
     nouveau_output->amount = montant;
+    nouveau_output->outIndex = 0;
     nouveau_output->timestamp = (long)time(NULL);
  
     //on stocke le nom du proprio avec strdup (et on vérifie que ça marche)
@@ -32,7 +34,7 @@ TxOutputs* creer_output(long montant, char *nom_destinataire) {
  
     return nouveau_output;
 }
- 
+
 //ajout d'un UTXO dans la liste globale -> monnaie tracée dès qu'elle rentre
 void ajouter_utxo(TxOutputs *output, char *txid_source, int index) {
     if (output == NULL || txid_source == NULL) return;
@@ -95,9 +97,7 @@ void supprimer_utxo(char *txid_source, int index) {
             } else {
                 precedent->next = courant->next;
             }
- 
-            //on libère l'étiquette et le nœud, mais PAS txOut qui reste dans la blockchain
-            free(u);
+
             free(courant);
             return;
         }
@@ -187,7 +187,23 @@ Slist* select_utxos_greedy(char *nom_emetteur, long montant_cible, long *somme_r
 
     return selection;
 }
- 
+//caclul solde des billets
+long calculer_solde_reel(struct account *acc) {
+    if (acc == NULL) return 0;
+    long total = 0;
+    struct Slist *curr = global_utxo_list; // ← parcourir la liste GLOBALE
+    while (curr != NULL) {
+        Utxo *u = (Utxo *)curr->info;
+        if (u && u->txOut && u->txOut->lockingScript[0] &&
+            strcmp(u->txOut->lockingScript[0], acc->str) == 0) {
+            total += u->txOut->amount;
+        }
+        curr = curr->next;
+    }
+    acc->balance = total;
+    return total;
+}
+
 //-------------NETTOYAGE-----------------------
 //vide toute la liste(fin de marché)
 //ici on libère étiquettes + TxOutputs + lockingScript + noeuds
