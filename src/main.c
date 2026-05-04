@@ -31,6 +31,8 @@ int main() {
     int helicopter_deja_lance = 0; //faux pour l'instant
     int choix = 0;
     srand(time(NULL));
+    int tx_en_attente = 0; //compteur pr créer un bloc manuellement
+    int tx_max_bloc = (rand() % (MAXTX - 1)) + 1; // entre 1 et 9
 
     // Installation du handler de signal
     struct sigaction sa;
@@ -50,7 +52,7 @@ int main() {
         printf("4. Sauver la blockchain au format json\n");
         printf("5. Lancer la phase de marché\n"); //phase dynamique Verifier la coherence de la blockchain
         printf("6. Afficher les utilisateurs\n");
-        printf("7. consulter registre utxo\n");
+        printf("7. Consulter registre utxo\n");
         printf("8. Quitter\n");
         printf("================================================\n");
         
@@ -115,8 +117,8 @@ int main() {
             case 3:
                 //transaction entre utilisateurs
                 printf("\n--- NOUVELLE TRANSACTION ---\n");
-                if (ma_monnaie == NULL || ma_liste_accounts.nb_accounts == 0) {
-                    printf("[Erreur] Veuillez d'abord creer la blockchain et les utilisateurs (Option 1).\n");
+                if (ma_monnaie == NULL || ma_liste_accounts.nb_accounts == 0|| helicopter_deja_lance == 0) {
+                    printf("[Erreur] Veuillez d'abord creer la blockchain et les utilisateurs (Option 1) et lancer l'hélicoptère money (Option 2).\n");
                     break;
                 }
 
@@ -173,36 +175,54 @@ int main() {
                 
                 //mise en place de la transaction  (similaire phase de marché mais cas unique)
                 Transaction *tx = create_incomplete_transaction(src, beneficiaire, montant);
+                
                 if (tx != NULL) {
-                    int idx_mineur = rand() % ma_liste_accounts.nb_accounts;
-                    Account *mineur_acc = &ma_liste_accounts.accounts[idx_mineur];
-                    printf("[Info] Mineur tire au sort : %s\n", mineur_acc->str);
-                    finaliser_transaction_par_mineur(tx, mineur_acc);
+                    finaliser_transaction_par_mineur(tx, src); //on maj les soldes et utxo
+                    enfiler_mempool(tx);
+                    tx_en_attente++;
+                    
+                    printf("[Succes] Transaction %s -> %s (%ld BTU) ajoutée au mempool (liste d'attente) (%d/%d).\n",emetteur, beneficiaire, montant, tx_en_attente, tx_max_bloc);
+                    
+                    //si le mempool est plein, on mine automatiquement
+                    if (tx_en_attente >= tx_max_bloc) {
+                        printf("\n[Info] Mempool plein, minage automatique...\n");
 
-                    // Créer un bloc temporaire
-                    Block *bloc = create_nouveau_bloc(ma_monnaie->bc);
-                    if (bloc == NULL) { free(tx); break; }
-                    strncpy(bloc->minerName, mineur_acc->str, MAX_STRING);
-                    strncpy(bloc->comment, "Transaction manuelle", MAX_STRING);
+                        int idx_mineur = rand() % ma_liste_accounts.nb_accounts;
+                        Account *mineur_acc = &ma_liste_accounts.accounts[idx_mineur];
+                        printf("[Info] Mineur tire au sort : %s\n", mineur_acc->str);
 
-                    // Ajouter la tx au bloc temporaire
-                    bloc->transactions = inserer_en_tete(bloc->transactions, tx);
-                    bloc->nbTx++;
+                        Block *bloc = create_nouveau_bloc(ma_monnaie->bc);
+                        if (bloc == NULL) { break; }
+                        strncpy(bloc->minerName, mineur_acc->str, MAX_STRING);
+                        strncpy(bloc->comment, "Bloc transactions manuelles", MAX_STRING);
 
-                    // Coinbase + minage + ajout officiel
-                    creer_tx_coinbase(ma_monnaie, bloc, mineur_acc->str);
-                    mine_block(bloc, ma_monnaie->bc->difficulty);
+                        //dépiler et finaliser les transactions
+                        int nb = 0;
+                        while (nb < tx_max_bloc) {
+                            Transaction *tx_piochee = defiler_mempool();
+                            if (tx_piochee == NULL) break;
+                            bloc->transactions = inserer_en_tete(bloc->transactions, tx_piochee);
+                            bloc->nbTx++;
+                            nb++;
+                        }
+                        creer_tx_coinbase(ma_monnaie, bloc, mineur_acc->str);
+                        mine_block(bloc, ma_monnaie->bc->difficulty);
 
-                    if (!ajouter_bloc_blockchain(ma_monnaie->bc, bloc, ma_monnaie->bc->difficulty)) {
-                        printf("[Erreur] Bloc rejeté.\n");
-                        free(bloc);
-                    } else {
-                        printf("[Succes] Transaction minee dans le bloc #%d.\n", bloc->index);
+                        if (!ajouter_bloc_blockchain(ma_monnaie->bc, bloc, ma_monnaie->bc->difficulty)) {
+                            printf("[Erreur] Bloc rejeté.\n");
+                            free(bloc);
+                        } else {
+                            printf("[Succes] Bloc #%d miné avec %d transactions.\n", bloc->index, bloc->nbTx);
+                        }
+                        tx_en_attente = 0;
+                        tx_max_bloc=(rand() % (MAXTX - 1)) + 1; //pour le prochain bloc 
                     }
+
                 } else {
                     printf("Probleme lors de la selection des UTXO.\n");
                 }
                 break;
+
 
             case 4:
                 printf("\n--- EXPORT JSON ---\n");
@@ -226,7 +246,7 @@ int main() {
             case 5:
                 
                 printf("\n--- Phase de Marché ---\n");
-                if (ma_monnaie == NULL || ma_liste_accounts.nb_accounts == 0) {
+                if (ma_monnaie == NULL || ma_liste_accounts.nb_accounts == 0|| helicopter_deja_lance == 0) {
                     printf("[Erreur] Veuillez d'abord initialiser la blockchain (Option 1) et l'helicopter money (Option 2).\n");
                     break;
                 }
