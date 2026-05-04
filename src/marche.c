@@ -11,6 +11,7 @@
 #include "transaction.h"
 #include "marche.h"
 #include "bloc.h"
+#include "cryptographie.h"
 
 //variables globales
 static int cycleRounds = 0;
@@ -212,6 +213,10 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
     char buffer[MAX_BUF];
     sprintf(buffer, "%s%s%ld%ld", tx->adSender, tx->adReceiver, tx->txAmount, tx->timestamp);
     sha256ofString((BYTE *)buffer, (char*)tx->txid);
+
+    //signature pr transac
+    BYTE signature[HASHLENGTH];
+    signer_transaction(tx, donneur->priv_key, signature);
 
     //"modif chirine" suppr des utxo consommes
     curr = tx->lstInputs;
