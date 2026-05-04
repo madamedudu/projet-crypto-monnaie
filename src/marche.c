@@ -244,7 +244,6 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
         ajouter_utxo(out_change, (char*)tx->txid, 2);
         tx->nbOutputs++;;
     }
-
 }
 
 
@@ -256,6 +255,8 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
     extern volatile sig_atomic_t pause_flag; // Déclarée dans le main
 
     printf("Démarrage de la Phase de Marché... (Ctrl+C pour Pause)\n");
+    sleep(3);
+    printf("\n");
     int bilan_affiche = 0; //affichage du bilan 1 fois
     while (1) { // boucle infinie
         
@@ -315,7 +316,9 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
 
             Account *donneur = trouver_compte(la, (char*)tx_piochee->adSender);
             if (donneur != NULL) {
-                finaliser_transaction_par_mineur(tx_piochee, donneur);
+                if (tx_piochee->txid[0] == '\0') {
+                    finaliser_transaction_par_mineur(tx_piochee, donneur); //si c'est tx aleatoire dans phase de marché
+                }
                 //on ajoute directement au bloc temporaire
                 bloc_a_miner->transactions = inserer_en_tete(bloc_a_miner->transactions, tx_piochee);
                 bloc_a_miner->nbTx++;
