@@ -4,6 +4,50 @@
 #include <time.h>
 #include "define.h"
 #include "sha256_utils.h"
+#include "blockchain.h"
+ 
+//modif par chirine pour empecher que le nv bloc créé rentre dans la blockchain sans verif
+Block* create_nouveau_bloc(Blockchain *bc) {
+    if (bc == NULL || bc->blocklist == NULL) return NULL;
+    
+    //On trouve le dernier bloc
+    Slist *bloc_courant = bc->blocklist;
+    while (bloc_courant->next != NULL){
+        bloc_courant = bloc_courant->next;
+    }
+
+    Block *dernier_bloc = (Block *)bloc_courant->info;
+
+    //On créer un nouveau bloc
+    Block *nouveau_block = malloc(sizeof(Block));
+    if (nouveau_block == NULL){
+        printf("erreur allocation du nouveau bloc\n");
+        return NULL;
+    }
+ 
+    memset(nouveau_block, 0, sizeof(Block)); //On met les champs un bloc à 0 au debut
+
+    //On initialise le nouveau bloc
+    nouveau_block->index = bc->nbBlocks;
+    nouveau_block->timestamp = time(NULL);
+    nouveau_block->nbTx = 0;
+    nouveau_block->transactions = NULL;
+    nouveau_block->nonce = 0;
+
+    //On relie le nouveau bloc avec le dernier bloc de la blockchain
+    strcpy((char *)nouveau_block->previousHash, (char *)dernier_bloc->blockHash);
+
+    //On initialise des champs de texte
+    memset(nouveau_block->merkleTree, '0', HASHLENGTH - 1);
+    nouveau_block->merkleTree[HASHLENGTH - 1] = '\0';
+
+    memset(nouveau_block->blockHash, 0, HASHLENGTH);
+
+    strcpy(nouveau_block->minerName, "");
+    strcpy(nouveau_block->comment, "New pending block");
+
+    return nouveau_block;
+}
 
 
 //--- mining (hash) ---
@@ -20,6 +64,18 @@ void mine_block(Block *bloc, int difficulty) {
 
     int success = 0; //pour touver le hash valide (difficulty = 4)
 
+
+   // --- Calcul du Merkle Root si on a des transactions ---
+    // Si c'est le bloc Genesis, nbTx vaut 0 donc on saute cette étape.
+    if (bloc->nbTx > 0 && bloc->transactions != NULL) {
+        
+        // CORRECTION ICI : On passe directement la Slist* (bloc->transactions) !
+        // Plus besoin de malloc, de boucle, ni de free.
+        merkle_root(bloc->transactions, bloc->nbTx, (char*)bloc->merkleTree);
+        
+        printf("Arbre de Merkle calcule : %s\n", bloc->merkleTree);
+    }
+
     //--- creation de la chaîne de comparaison (ex: "0000" si difficulté = 4)
     char diff_str[difficulty + 1];
 
@@ -29,7 +85,7 @@ void mine_block(Block *bloc, int difficulty) {
     
     diff_str[difficulty] = '\0';
 
-    printf("Minage du bloc en cours...\n");
+    printf("Minage du bloc %d en cours...\n", bloc->index);
 
     while (!success) { //"tant que on a pas trouver un bon hash"
 
@@ -52,7 +108,8 @@ void mine_block(Block *bloc, int difficulty) {
             // On enregistre le hash trouve dans le bloc
             strncpy((char*)bloc->blockHash, hash_res, HASHLENGTH);
 
-            printf("Bloc %d miné ! Hash: %s | Nonce: %ld\n", bloc->index, hash_res, bloc->nonce);} else {
+            printf("Bloc %d miné ! Hash: %s | Nonce: %ld\n", bloc->index, hash_res, bloc->nonce);
+        } else {
 
             bloc->nonce++; // On incremente et on recommence
         }

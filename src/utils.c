@@ -1,112 +1,164 @@
 #include <stdio.h>     
 #include <stdlib.h>    
 #include "define.h"    
-#include "utils.h"     
+#include "utils.h"  
+#include "utxo.h"   
 
 //afficher tout les comptes avec leur soldes dans la console
-void afficher_users(ListeUsers liste) {
-    printf("----- LISTE DES UTILISATEURS :-----\n");
-
-    for (int i = 0; i < liste.nb_users; i++) {
-        printf("%s : %.2f BT\n", liste.users[i].adresse, liste.users[i].solde);
+//----------MODIFICATION CHIRINE------------
+void afficher_accounts(ListeAccounts liste) {
+    printf("----- LISTE DES COMPTES :-----\n");
+    for (int i = 0; i < liste.nb_accounts; i++) {
+        long solde = calculer_solde_reel(&liste.accounts[i]); //calcul du solde reel des user lors d'une transaction 
+        printf("%s : %ld BTU\n", liste.accounts[i].str, solde);
     }
-
     printf("----------------------------------\n");
 }
 
-//fonction qui retranscrit la blockchain dans un fichier .json 
-//on doit afficher : ensemble des blocs, les transactions et les utilisateurs 
-/*
 
-Utilisateurs
-Blockchain
- → Bloc 1
-     → transactions
- → Bloc 2
-     → transactions
-     
-*/
-void export_blockchain_json(ListeUsers liste, Blockchain *blockchain, const char* filename){
+
+//fonction qui retranscrit la blockchain dans un fichier .json 
+void export_blockchain_json(ListeAccounts liste, Blockchain *blockchain, const char* filename){
     FILE* file = fopen(filename, "w");
     if (file == NULL) {
         printf("Erreur ouverture fichier\n");
         return;
     }
+    
     fprintf(file, "{\n");
 
+    //--------------------- NAME + MONEY ---------------------
+    fprintf(file, "\"Name\": \"bit thune\",\n");
 
-
-    //--------------------- USERS ---------------------
-    fprintf(file, "  \"users\": [\n");
-    for(int i = 0; i < liste.nb_users; i++) {
-        fprintf(file, "    {\n");
-        fprintf(file, "      \"adresse\": \"%s\",\n", liste.users[i].adresse);
-        fprintf(file, "      \"solde\": %.2f\n", liste.users[i].solde);
-        if (i == liste.nb_users - 1)
-            fprintf(file, "    }\n");
-        else
-            fprintf(file, "    },\n");
+    long money = 0;
+    for(int i = 0; i < liste.nb_accounts; i++){
+        money += calculer_solde_reel(&liste.accounts[i]); //modif chirine valeur exacte des soldes
     }
-    fprintf(file, "  ],\n");
-
-
-
+    fprintf(file, "\"Money supply\": %ld,\n", money); //vrai money calculée
 
     //---------------------- BLOCKCHAIN -------------------------
-    fprintf(file, "  \"blockchain\": [\n");
+    fprintf(file, "\"blockchain\": {\n");
+    fprintf(file, "\"Difficulty\": %d,\n", blockchain->difficulty);
+    fprintf(file, "\"Nb blocks\": %d,\n", blockchain->nbBlocks);
+    fprintf(file, "\"Actual reward\": %d,\n", blockchain->reward4mining);
+
+    fprintf(file, "\"blocks\":[\n");
+
     if(blockchain != NULL && blockchain->blocklist != NULL) {
         Slist *BlocCourant = blockchain->blocklist;
 
-        //Tant qu'on arrive pas a la fin de la blockchain
         while (BlocCourant != NULL) {
-            //informations d'un bloc
             Block *block = (Block*) BlocCourant->info;
-            fprintf(file, "    {\n");
-            fprintf(file, "      \"index\": %d,\n", block->index);
-            fprintf(file, "      \"timestamp\": %ld,\n", block->timestamp);
-            fprintf(file, "      \"nonce\": %ld,\n", block->nonce);
-            fprintf(file, "      \"miner\": \"%s\",\n", block->minerName);
-            fprintf(file, "      \"previousHash\": \"%s\",\n", block->previousHash);
-            fprintf(file, "      \"hash\": \"%s\",\n", block->blockHash);
 
+            // timestamp lisible
+            char time_str[100];
+            strftime(time_str, sizeof(time_str), "%a %b %d %H:%M:%S %Y", localtime(&block->timestamp));
 
+            fprintf(file, "  {\n");
+            fprintf(file, "  \"index\": %d,\n", block->index);
+            fprintf(file, "  \"time stamp\": \"%s\",\n", time_str);
+            fprintf(file, "  \"previous hash\": \"%s\",\n", block->previousHash);
+            fprintf(file, "  \"Nb tx\": %d,\n", block->nbTx);
 
-            //-------------- TRANSACTIONS --------------------
-            fprintf(file, "      \"transactions\": [\n");
-            if (block->transactions != NULL){
-                //information d'une transaction qui est dans un blo
-                Slist *TransactionCourante = block->transactions;
-                while (TransactionCourante != NULL) {
-                    Transaction *tx = (Transaction*) TransactionCourante->info;
-                    fprintf(file, "        {\n");
-                    fprintf(file, "          \"from\": \"%s\",\n", tx->adSender);
-                    fprintf(file, "          \"to\": \"%s\",\n", tx->adReceiver);
-                    fprintf(file, "          \"amount\": %ld,\n", tx->txAmount);
-                    fprintf(file, "          \"timestamp\": %ld\n", tx->timestamp);
+            //---------------- TRANSACTIONS ----------------
+            fprintf(file, "  \"transactions\":[\n");
 
-                    if(TransactionCourante->next == NULL){
-                        fprintf(file, "        }\n");
-                    }
-                    else{
-                        fprintf(file, "        },\n");
-                    }
-                        
-                    TransactionCourante = TransactionCourante->next;
+            Slist *TransactionCourante = block->transactions;
+
+            while (TransactionCourante != NULL) {
+                Transaction *tx = (Transaction*) TransactionCourante->info;
+
+                char tx_time[100];
+                strftime(tx_time, sizeof(tx_time), "%a %b %d %H:%M:%S %Y", localtime(&tx->timestamp));
+
+                fprintf(file, "  {\n");
+
+                fprintf(file, "    \"TxId\": \"%s\",\n", tx->txid);
+                fprintf(file, "    \"Timestamp\": \"%s\",\n", tx_time);
+                fprintf(file, "    \"Sender\": \"%s\",\n", tx->adSender);
+                fprintf(file, "    \"Receiver\": \"%s\",\n", tx->adReceiver);
+                fprintf(file, "    \"Amount\": %ld,\n", tx->txAmount);
+
+                //---------------- INPUTS ----------------
+                fprintf(file, "    \"Nb inputs\": %d,\n", tx->nbInputs);
+                fprintf(file, "    \"Inputs list\":[\n");
+
+                Slist *in = tx->lstInputs;
+                while (in != NULL) {
+                    Utxo *input = (Utxo*) in->info;//liste contient des utxo
+
+                    fprintf(file, "      {\n");
+                    fprintf(file, "      \"txid\": \"%s\",\n", input->hash);
+                    fprintf(file, "      \"index\": %d\n", input->indexOutput);
+
+                    if (in->next == NULL)
+                        fprintf(file, "      }\n");
+                    else
+                        fprintf(file, "      },\n");
+
+                    in = in->next;
                 }
+                fprintf(file, "    ],\n");
+
+                //---------------- OUTPUTS ----------------
+                fprintf(file, "    \"Nb outputs\": %d,\n", tx->nbOutputs);
+                fprintf(file, "    \"Outputs list\":[\n");
+
+                Slist *out = tx->lstOutputs;
+                int index = 0;
+
+                while (out != NULL) {
+                    TxOutputs *output = (TxOutputs*) out->info;
+
+                    fprintf(file, "      {\n");
+                    fprintf(file, "      \"out index\": %d,\n", index);
+                    fprintf(file, "      \"Catégorie\": \"transaction\",\n");
+                    fprintf(file, "      \"Timestamp\": \"%s\",\n", tx_time);
+                    fprintf(file, "      \"lock\": \"%s\",\n", output->lockingScript[0]);
+                    fprintf(file, "      \"Amount\": %ld\n", output->amount);
+
+                    if (out->next == NULL)
+                        fprintf(file, "      }\n");
+                    else
+                        fprintf(file, "      },\n");
+
+                    out = out->next;
+                    index++;
+                }
+                fprintf(file, "    ],\n");
+
+                //---------------- COMMENT ----------------
+                fprintf(file, "    \"Comments\": \"%s\"\n", tx->comment);
+
+                if(TransactionCourante->next == NULL)
+                    fprintf(file, "  }\n");
+                else
+                    fprintf(file, "  },\n");
+
+                TransactionCourante = TransactionCourante->next;
             }
 
-            fprintf(file, "      ]\n");
-            if(BlocCourant->next == NULL){
-                fprintf(file, "    }\n");
-            } 
-            else{
-                fprintf(file, "    },\n");
-            }
+            fprintf(file, "  ],\n");
+
+            //---------------- BLOCK INFOS ----------------
+            fprintf(file, "\"Merkle root\": \"%s\",\n", block->merkleTree);
+            fprintf(file, "\"current hash\": \"%s\",\n", block->blockHash);
+            fprintf(file, "\"nonce\": %ld,\n", block->nonce);
+            fprintf(file, "\"miner name\": \"%s\",\n", block->minerName);
+            fprintf(file, "\"comment\": \"%s\"\n", block->comment);
+
+            if(BlocCourant->next == NULL)
+                fprintf(file, "}\n");
+            else
+                fprintf(file, "},\n");
+
             BlocCourant = BlocCourant->next;
         }
     }
-    fprintf(file, "  ]\n");
-    fprintf(file, "}\n");
+
+    fprintf(file, "]\n"); // fin blocks
+    fprintf(file, "}\n"); // fin blockchain
+    fprintf(file, "}\n"); // fin JSON global
 
     fclose(file);
     printf("FIN EXPORT JSON : %s\n", filename);

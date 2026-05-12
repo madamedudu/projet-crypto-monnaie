@@ -11,5 +11,6 @@ int verification_merkle_blockchain(Blockchain *bc);
 int verification_preuve_travail(Block *bloc,int difficulte);
 int verification_hash_bloc(Block *bloc);
 int ajouter_bloc_blockchain(Blockchain *bc, Block *nouveau_bloc, int difficulte);
+void liberer_blockchain(Blockchain *bc);
 
 #endif
