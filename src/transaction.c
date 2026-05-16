@@ -78,6 +78,7 @@ ListeAccounts generer_accounts(int nombre) {
  */
 
 //---------Modification Chirine---------
+//change des listes par accounts
 Transaction* create_helicopter_transaction(char *dest_address) {
     Transaction *trans = malloc(sizeof(Transaction));
     memset(trans, 0, sizeof(Transaction));

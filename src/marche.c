@@ -16,7 +16,7 @@
 //variables globales
 static int cycleRounds = 0;
 static const int limit = HALVING;
-static int nb_halvings = 0;  // Pour le bilan final
+static int nb_halvings = 0; //binlan
 
 /* 
  *  Trouver le montant d'un UTXO consommé (pour calculer les frais) 
@@ -26,7 +26,7 @@ long get_input_amount(Blockchain *bc, char *txHash, int index) {
         return 0;
     }
         
-    // On parcourt toute la blockchain pour retrouver la transaction source
+    //parcours bc pr trouver transasource
     Slist *bloc_courant = bc->blocklist;
     while (bloc_courant != NULL) 
     {
@@ -37,7 +37,7 @@ long get_input_amount(Blockchain *bc, char *txHash, int index) {
             while (tx_courante != NULL) 
             {
                 Transaction *tx = (Transaction *)tx_courante->info;
-                // Si la TX source est trouve
+                //si la TX source est trouve
                 if (tx != NULL && strcmp((char*)tx->txid, txHash) == 0) 
                 {
                     Slist *out_courant = tx->lstOutputs;
@@ -47,7 +47,7 @@ long get_input_amount(Blockchain *bc, char *txHash, int index) {
                         TxOutputs *out = (TxOutputs *)out_courant->info;
                         if (out != NULL && current_idx == index) 
                         {
-                            return out->amount; // On retourne le montant original
+                            return out->amount; //montant original
                         }
                         current_idx++;
                         out_courant = out_courant->next;
@@ -58,7 +58,7 @@ long get_input_amount(Blockchain *bc, char *txHash, int index) {
         }
         bloc_courant = bloc_courant->next;
     }
-    return 0; 
+    return 0; //montant couran pas teouvé
 }
 
 /* 
@@ -192,7 +192,7 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address) {
 void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
     if (tx == NULL) return;
 
-    //Calcul du montant total des inputs pour définir le change
+    //Calcul du montant total des inputs+ le change
     long total_entree = 0;
     Slist *curr = tx->lstInputs;
     while (curr) {
@@ -201,15 +201,14 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
         curr = curr->next;
     }
 
-    //  Calcul des frais (5%) et du change
+    //calc frais et change
     long frais = (tx->txAmount * FEE_RATE) / 100;
     long monnaie_rendue = total_entree - tx->txAmount - frais;
 
-    //  Création des Outputs (Paiement + Change)
+    // cree l'outpu
     tx->timestamp = time(NULL);
 
 
-    // Calcul du Hash(TXID) il doit être connu avant d'enregistrer les outputs dans global_utxo_list
     char buffer[MAX_BUF];
     sprintf(buffer, "%s%s%ld%ld", tx->adSender, tx->adReceiver, tx->txAmount, tx->timestamp);
     sha256ofString((BYTE *)buffer, (char*)tx->txid);
@@ -228,14 +227,14 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
 
     tx->nbOutputs = 0;
     tx->lstOutputs = NULL;
-    //  Destinataire
+    //recepteur ->paienment
     TxOutputs *out_dest = creer_output(tx->txAmount, (char*)tx->adReceiver);
     out_dest->outIndex = 0;
     tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_dest);
     ajouter_utxo(out_dest, (char*)tx->txid, 0);
     tx->nbOutputs++;
 
-    //frais output 1
+    //rendu dest
     TxOutputs *out_frais = creer_output(frais, "FEES");
     out_frais->outIndex = 1;
     tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_frais);
@@ -342,7 +341,7 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
         mine_block(bloc_a_miner, bc->difficulty);
 
 
-        //vérification bloc et ajout
+        //vérif bloc et ajout
         printf("Vérification de l'intégrité du bloc #%d...\n", bloc_a_miner->index);
         if (!ajouter_bloc_blockchain(bc, bloc_a_miner, bc->difficulty)) {
             printf("[Erreur] Bloc #%d rejeté.\n", bloc_a_miner->index);
