@@ -142,8 +142,8 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address) {
     }
     memset(tx_coinbase, 0, sizeof(Transaction));
 
-    strncpy((char*)tx_coinbase->adSender, "SYSTEM_COINBASE", HASHLENGTH);
-    strncpy((char*)tx_coinbase->adReceiver, miner_address, HASHLENGTH);
+    strncpy((char*)tx_coinbase->adSender, "SYSTEM_COINBASE", ADDRESS_LEN);
+    strncpy((char*)tx_coinbase->adReceiver, miner_address, ADDRESS_LEN);
     tx_coinbase->txAmount = montant_total;
     tx_coinbase->timestamp = time(NULL);
     strncpy(tx_coinbase->comment, "Recompense de minage + Frais des transactions", MAX_STRING);
