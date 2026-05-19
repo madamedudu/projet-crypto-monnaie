@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "test.h"
+#include <stdint.h>
+
+typedef unsigned char byte;
 
 char* base58_encode(byte *s, int s_size, char *out, int out_size) {
         static const char *tmpl = "123456789"
