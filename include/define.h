@@ -31,6 +31,9 @@
 //Modification eleve
 #define ADRESS_SIZE 50
 
+//Phase 3
+#define ADDRESS_LEN 35
+
 
 // structure générique de liste non typée (à typer à l'utilisation)
 typedef struct Slist {
@@ -70,8 +73,11 @@ typedef struct transaction {
 	BYTE txid[SHA256_BLOCK_SIZE*2 + 1]; // txid = hash(hash(tx))
   time_t timestamp; // date de création
 	//time_t deadline; // date de péremption
-	BYTE adSender[SHA256_BLOCK_SIZE*2 + 1]; // ou nom "user x" pour la partie 1
-	BYTE adReceiver[SHA256_BLOCK_SIZE*2 + 1]; // idem
+  // BYTE adSender[SHA256_BLOCK_SIZE*2 + 1]; 
+	// BYTE adReceiver[SHA256_BLOCK_SIZE*2 + 1]; 
+  //Phase3
+	BYTE adSender[ADDRESS_LEN]; // ou nom "user x" pour la partie 1
+	BYTE adReceiver[ADDRESS_LEN]; // idem
   long txAmount; // en bit_thune
   int nbInputs; // partie 2
   struct Slist * lstInputs; // une ou plusieurs UTXO (parties 2 et 3)
@@ -96,9 +102,10 @@ typedef struct utxo{
 typedef struct account {
   char str[MAX_STRING]; //mnémonic : plus facile à lire pour débuguer qu'une adresse
   Slist * utxoList; // liste des tx non dépensées du compte
-  BYTE address[SHA256_BLOCK_SIZE*2 + 1]; // (parties 2 et 3)
-	BYTE priv_key[SHA256_BLOCK_SIZE*2 + 1]; // (parties 2 et 3)
-	BYTE pub_key[SHA256_BLOCK_SIZE*4 + 1]; // (parties 2 et 3)
+  // BYTE address[SHA256_BLOCK_SIZE*2 + 1]; // (parties 2 et 3)
+  BYTE address[ADDRESS_LEN];//Phase3
+	BYTE priv_key[65]; // (parties 2 et 3)
+	BYTE pub_key[67]; // (parties 2 et 3)
   long balance; // solde du compte
 } Account;
 

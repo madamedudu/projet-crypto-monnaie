@@ -83,8 +83,8 @@ Transaction* create_helicopter_transaction(char *dest_address) {
     Transaction *trans = malloc(sizeof(Transaction));
     memset(trans, 0, sizeof(Transaction));
     //sender : système (Coinbase)
-     strncpy((char*)trans->adSender, "SYSTEM_COINBASE", HASHLENGTH);
-    strncpy((char*)trans->adReceiver, dest_address, HASHLENGTH);
+     strncpy((char*)trans->adSender, "SYSTEM_COINBASE", ADDRESS_LEN);
+    strncpy((char*)trans->adReceiver, dest_address, ADDRESS_LEN);
     trans->txAmount = HELIREWARD; 
     trans->timestamp = time(NULL);
     strncpy(trans->comment, "Helicopter Money", MAX_STRING);
@@ -180,8 +180,8 @@ Transaction* create_incomplete_transaction(Account *compte_donneur, char *nom_re
     Transaction *tx = malloc(sizeof(Transaction));
     memset(tx, 0, sizeof(Transaction));
 
-    strncpy((char*)tx->adSender, compte_donneur->str, HASHLENGTH);
-    strncpy((char*)tx->adReceiver, nom_receveur, HASHLENGTH);
+    strncpy((char*)tx->adSender, compte_donneur->str, ADDRESS_LEN);
+    strncpy((char*)tx->adReceiver, nom_receveur, ADDRESS_LEN);
     tx->txAmount = montant;
     tx->lstInputs = inputs_choisis;
     
