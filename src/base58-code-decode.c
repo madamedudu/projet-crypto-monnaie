@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 typedef unsigned char byte;
+//#include "test.h"
+#include "base58-code-decode.h"
 
 char* base58_encode(byte *s, int s_size, char *out, int out_size) {
         static const char *tmpl = "123456789"
