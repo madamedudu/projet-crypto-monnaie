@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+
+typedef unsigned char byte;
 //#include "test.h"
 #include "base58-code-decode.h"
 

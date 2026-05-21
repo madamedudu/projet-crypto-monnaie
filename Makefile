@@ -1,7 +1,7 @@
 # Compilateur et options de compilation
 CC = gcc
 CFLAGS = -Wall -Wno-deprecated-declarations -Wextra -Iinclude  -g
-LDFLAGS = -lcrypto
+LDFLAGS = -lcrypto -lssl
 
 
 # Dossiers du projet
