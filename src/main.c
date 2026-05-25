@@ -10,6 +10,7 @@
 #include "transaction.h"
 #include "utils.h" 
 #include "utxo.h" 
+#include "cryptographie.h"
 #include "marche.h" 
 
 // Variable globale pour la pause (CTRL C)
@@ -18,7 +19,35 @@ void handle_sigint(int sig) {
     (void)sig;
     pause_flag = 1; // On lève le drapeau de pause
 }
+void tester_scripts() {
+    printf("\n=== TEST DE CREATION DES SCRIPTS ===\n");
+    
+    // 1. Préparation des variables factices
+    TxOutputs fausse_sortie;
+    TxInputs fausse_entree;
+    char buffer_affichage[256]; // Pour stocker la chaîne finale
 
+    // 2. Test du Lock Script (Verrouillage)
+    creer_lock_script(&fausse_sortie, "SIGNATURE_FAUSSE", "CLE_PUB_FAUSSE");
+    
+    // On utilise ta fonction script_to_string pour lire les 4 cases
+    script_to_string(fausse_sortie.lockingScript, 4, buffer_affichage, sizeof(buffer_affichage));
+    
+    printf("-> Lock Script généré : '%s'\n", buffer_affichage);
+    // Attendu : "SIGNATURE_FAUSSE CLE_PUB_FAUSSE DUP HASH"
+
+
+    // 3. Test du Unlock Script (Déverrouillage)
+    creer_unlock_script(&fausse_entree, "HASH_CLE_PUB");
+    
+    // On utilise ta fonction script_to_string pour lire les 3 cases
+    script_to_string(fausse_entree.unlockingScript, 3, buffer_affichage, sizeof(buffer_affichage));
+    
+    printf("-> Unlock Script généré : '%s'\n", buffer_affichage);
+    // Attendu : "HASH_CLE_PUB EQ VER"
+    
+    printf("====================================\n\n");
+}
 // Dans main() avant de lancer le marché pour brancher l'interruption CTRL C: signal(SIGINT, handle_sigint);
 
 //on essaye de voir si ça git pull ce main
@@ -53,12 +82,13 @@ int main() {
         printf("5. Lancer la phase de marché\n"); //phase dynamique Verifier la coherence de la blockchain
         printf("6. Afficher les utilisateurs\n");
         printf("7. Consulter registre utxo\n");
-        printf("8. Quitter\n");
+        printf("8. Tester les scripts\n");
+        printf("9. Quitter\n");
         printf("================================================\n");
         
         int saisie_valide = 0;
         while (saisie_valide == 0) {
-            printf("Votre choix (1-8) : ");
+            printf("Votre choix (1-9) : ");
             
             //gestion de l'erreur si l'utilisateur tape une lettre
             if (scanf("%d", &choix) != 1) {
@@ -66,8 +96,8 @@ int main() {
                 printf("[Erreur] Veuillez entrer un chiffre entier.\n");
             } 
             //gestion de l'erreur si le chiffre est hors limites (1 a 6)
-            else if (choix < 1 || choix > 8) {
-                printf("[Erreur] Veuillez entrer un chiffre entre 1 et 8.\n");
+            else if (choix < 1 || choix > 9) {
+                printf("[Erreur] Veuillez entrer un chiffre entre 1 et 9.\n");
             } 
             else {
                 saisie_valide = 1; 
@@ -272,8 +302,11 @@ int main() {
                 }
                 break;
             
-
+            
             case 8:
+                tester_scripts();
+                break;
+            case 9:
                 //netoyage de tout l'espace en memoire
                 vider_liste_utxo();
                 if (ma_monnaie != NULL) {
@@ -291,7 +324,7 @@ int main() {
             printf("------------------------------------------------\n");
         }
 
-    } while (choix != 8);
+    } while (choix != 9);
 
     return 0;
 }
