@@ -54,6 +54,23 @@ memcpy(rmd + 21,SHA256(SHA256(rmd, 21, 0),SHA256_DIGEST_LENGTH,0),4);
     //printf("Address: %s\n\n", address);
 }
 
+void signer_transaction(Transaction *transaction, BYTE *cle_privee, BYTE *signature){
+    if(transaction == NULL || cle_privee == NULL || signature == NULL) return;
+
+    char buffer_donnees_transaction[512]; //contient toute les données de la transaction
+
+    //on transforme la transaction en chaîne parce que SHA256 prend un chaîne
+    sprintf(buffer_donnees_transaction, "%s%s%ld%ld",transaction->adSender, transaction->adReceiver, transaction->txAmount, transaction->timestamp);
+
+    //ici on simule une signature
+    char buffer_signature[600]; //va contenit la signature
+    sprintf(buffer_signature, "%s%s", buffer_donnees_transaction, cle_privee); //dans ke buffer_signature on met transaction + clé privée
+    
+    //on calcule maintenant la signature
+    sha256ofString((BYTE *)buffer_signature, (char *)signature);
+
+    printf("Transaction signée : %s\n", signature);
+}
 
 
 
@@ -122,4 +139,51 @@ void generer_cles(Account *compte){
     OPENSSL_free(cle_privee_hex);
     OPENSSL_free(cle_publique_hex);
     EC_KEY_free(paire_cles);
+}
+
+//creation du lock script
+void creer_lock_script(TxOutputs *out, char *signature, char *pubkey) {
+    if (out == NULL || signature == NULL || pubkey == NULL) return;
+
+    //4 slots car LOCK_SCRIPT_SIZE = 4
+    out->lockingScript[0] = strdup(signature);
+    out->lockingScript[1] = strdup(pubkey);
+    out->lockingScript[2] = strdup("DUP");
+    out->lockingScript[3] = strdup("HASH");
+
+    printf("Lock script cree : %s %s DUP HASH\n", signature, pubkey);
+}
+
+//creation du unlock script
+void creer_unlock_script(TxInputs *in,char * pubkey_hash){
+    if (in == NULL || pubkey_hash == NULL) return;
+
+    //3 slots UNLOCK_SCRIPT_SIZE = 3 dans define
+    in->unlockingScript[0] = strdup(pubkey_hash);
+    in->unlockingScript[1] = strdup("EQ");
+    in->unlockingScript[2] = strdup("VER");
+
+    printf(" Unlock script cree : %s EQ VER\n", pubkey_hash);
+}
+
+//concaténation pr json et debug
+void script_to_string(char **script, int size, char *out, int out_size) {
+    if (script == NULL || out == NULL || out_size <= 0){
+        perror("Erreur : paramètres invalides");
+        return;
+    } 
+    
+    out[0] = '\0'; //init la chaîne 
+    
+    for (int i = 0; i < size; i++) {
+        if (script[i] != NULL) {
+            //concat l'élément actuel
+            strncat(out, script[i], out_size - strlen(out) - 1);
+            
+            //espace entre les éléments, sauf après le dernier pr éviter un espace en trop
+            if (i < size - 1) {
+                strncat(out, " ", out_size - strlen(out) - 1);
+            }
+        }
+    }
 }
