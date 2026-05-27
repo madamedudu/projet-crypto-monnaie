@@ -115,8 +115,11 @@ long calculer_recompense(Blockchain *bc) {
 /* 
  * Point 9 and 11 : Transaction Coinbase et Mise à jour Monnaie
  */
-void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address) {
-    if (currency == NULL || currency->bc == NULL || bloc == NULL || miner_address == NULL) {
+//modifs Kasia
+//miner_address => Account *miner
+//miner->address et miner->pub_key pour generer la récompense.
+void creer_tx_coinbase(currency_t *currency, Block *bloc, Account *miner) {
+    if (currency == NULL || currency->bc == NULL || bloc == NULL || miner == NULL) {
         return;
     }
 
@@ -143,7 +146,7 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address) {
     memset(tx_coinbase, 0, sizeof(Transaction));
 
     strncpy((char*)tx_coinbase->adSender, "SYSTEM_COINBASE", ADDRESS_LEN);
-    strncpy((char*)tx_coinbase->adReceiver, miner_address, ADDRESS_LEN);
+    strncpy((char*)tx_coinbase->adReceiver, (char*)miner->address, ADDRESS_LEN);
     tx_coinbase->txAmount = montant_total;
     tx_coinbase->timestamp = time(NULL);
     strncpy(tx_coinbase->comment, "Recompense de minage + Frais des transactions", MAX_STRING);
@@ -153,7 +156,7 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address) {
     tx_coinbase->lstInputs = NULL;
 
     // 1 output vers le mineur = récompense + frais
-    TxOutputs *out_coinbase = creer_output(montant_total, miner_address);
+    TxOutputs *out_coinbase = creer_output(montant_total, (char*)miner->address, miner->pub_key);
     out_coinbase->outIndex = 0;
     
     Slist *noeud_out = malloc(sizeof(Slist));
@@ -182,7 +185,7 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address) {
     currency->moneySupply += recompense;
 
     printf("=> TX Coinbase (1ere position) pour %s : %ld BTU (Recompense: %ld, Frais: %ld)\n", 
-            miner_address, montant_total, recompense, frais);
+            miner->address, montant_total, recompense, frais);
 
     
     
@@ -228,21 +231,21 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
     tx->nbOutputs = 0;
     tx->lstOutputs = NULL;
     //recepteur ->paienment
-    TxOutputs *out_dest = creer_output(tx->txAmount, (char*)tx->adReceiver);
+    TxOutputs *out_dest = creer_output(tx->txAmount, (char*)tx->adReceiver, NULL);
     out_dest->outIndex = 0;
     tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_dest);
     ajouter_utxo(out_dest, (char*)tx->txid, 0);
     tx->nbOutputs++;
 
     //rendu dest
-    TxOutputs *out_frais = creer_output(frais, "FEES");
+    TxOutputs *out_frais = creer_output(frais, "FEES", NULL);
     out_frais->outIndex = 1;
     tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_frais);
     tx->nbOutputs++;
 
     //change (genre la monnaie rendu)
     if (monnaie_rendue > 0) {
-        TxOutputs *out_change = creer_output(monnaie_rendue, donneur->str);
+        TxOutputs *out_change = creer_output(monnaie_rendue, donneur->str, NULL);
         out_change->outIndex = 2;
         tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_change);
         ajouter_utxo(out_change, (char*)tx->txid, 2);
@@ -255,6 +258,7 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
 //lancement phase marché
 //---------------------------------------------------------
 
+//modifs Kasia
 void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_info) {
     extern volatile sig_atomic_t pause_flag; // Déclarée dans le main
 
@@ -334,7 +338,7 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
         }
 
         //creation transac coinbase
-        creer_tx_coinbase(curr_info, bloc_a_miner, mineur->str);
+        creer_tx_coinbase(curr_info, bloc_a_miner, mineur);
 
         //minage du bloc
         printf("Minage du bloc #%d...\n", bloc_a_miner->index);

@@ -5,7 +5,7 @@
 
 // ListeUsers generer_users(int nombre);
 // int create_transaction(ListeUsers *liste_utilisateurs, Blockchain *bc, char *donneur, char *receuver, long montant);
-Transaction* create_helicopter_transaction(char *dest_address);
+Transaction* create_helicopter_transaction(char *dest_address, BYTE *dest_pub_key);
 void run_helicopter_money(ListeAccounts *liste, currency_t *currency);
 
 //ajouts phase 2

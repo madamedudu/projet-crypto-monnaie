@@ -3,7 +3,7 @@
 
 #include "define.h"
 
-void creer_tx_coinbase(currency_t *currency, Block *bloc, char *miner_address);
+void creer_tx_coinbase(currency_t *currency, Block *bloc, Account *miner);
 long calculer_recompense(Blockchain *bc) ;
 long calculer_frais_bloc(Block *bloc);
 long get_input_amount(Blockchain *bc, char *txHash, int index);

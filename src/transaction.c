@@ -131,7 +131,7 @@ void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
         
     
         //T8: on utilise address et pub_key du compte
-        Transaction *h_trans = create_helicopter_transaction(liste->accounts[i].address, liste->accounts[i].pub_key);        
+        Transaction *h_trans = create_helicopter_transaction((char*)liste->accounts[i].address, liste->accounts[i].pub_key);        
         //on crée un bloc temporaire hors de la chaîne
         Block *bloc_a_miner = create_nouveau_bloc(currency->bc);
         if (bloc_a_miner == NULL) break;
