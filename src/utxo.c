@@ -10,7 +10,7 @@
 struct Slist *global_utxo_list = NULL;
 
 //-------------CREATION D'UN OUTPUT-----------------------
-TxOutputs* creer_output(long montant, char *nom_destinataire) {
+TxOutputs* creer_output(long montant, char *nom_destinataire, BYTE *pub_key) {
     if (nom_destinataire == NULL) return NULL;
  
     //allocation mémoire du nouveau billet
