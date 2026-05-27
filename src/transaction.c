@@ -79,11 +79,15 @@ ListeAccounts generer_accounts(int nombre) {
 
 //---------Modification Chirine---------
 //change des listes par accounts
-Transaction* create_helicopter_transaction(char *dest_address) {
+// modifs Kasia
+// la fct doit mtn accepter la clé publique du destinataire dest_pub_key
+// creer_output doit intégrer clé publique
+Transaction* create_helicopter_transaction(char *dest_address, BYTE *dest_pub_key) {
     Transaction *trans = malloc(sizeof(Transaction));
     memset(trans, 0, sizeof(Transaction));
+
     //sender : système (Coinbase)
-     strncpy((char*)trans->adSender, "SYSTEM_COINBASE", ADDRESS_LEN);
+    strncpy((char*)trans->adSender, "SYSTEM_COINBASE", ADDRESS_LEN);
     strncpy((char*)trans->adReceiver, dest_address, ADDRESS_LEN);
     trans->txAmount = HELIREWARD; 
     trans->timestamp = time(NULL);
@@ -93,7 +97,8 @@ Transaction* create_helicopter_transaction(char *dest_address) {
     trans->lstInputs = NULL;
     trans->nbOutputs = 1;
     
-    TxOutputs *nouveau_output = creer_output(HELIREWARD, dest_address);
+    TxOutputs *nouveau_output = creer_output(HELIREWARD, dest_address, dest_pub_key);
+
     if (nouveau_output != NULL) {
         struct Slist *noeud = malloc(sizeof(struct Slist));
         noeud->info = (void *)nouveau_output;
@@ -115,7 +120,8 @@ Transaction* create_helicopter_transaction(char *dest_address) {
 
 
 
-
+//modifs Kasia
+//passer la vraie adresse Base58 et la vraie clé publique du compte.
 void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
     if (liste == NULL || currency == NULL) return;
     printf(" Lancement : Helicopter Money (Phase 2 UTXO)\n");
@@ -124,8 +130,8 @@ void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
     for (int i = 0; i < liste->nb_accounts; i++) {
         
     
-        Transaction *h_trans = create_helicopter_transaction(liste->accounts[i].str);
-        
+        //T8: on utilise address et pub_key du compte
+        Transaction *h_trans = create_helicopter_transaction(liste->accounts[i].address, liste->accounts[i].pub_key);        
         //on crée un bloc temporaire hors de la chaîne
         Block *bloc_a_miner = create_nouveau_bloc(currency->bc);
         if (bloc_a_miner == NULL) break;
