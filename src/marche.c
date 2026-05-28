@@ -218,7 +218,7 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
 
     //signature pr transac
     BYTE signature[HASHLENGTH];
-    signer_transaction(tx, donneur->priv_key, signature);
+    signer_transaction_ecdsa(tx, donneur->priv_key, signature);
 
     //"modif chirine" suppr des utxo consommes
     curr = tx->lstInputs;
