@@ -207,7 +207,7 @@ int main() {
                 Transaction *tx = create_incomplete_transaction(src, beneficiaire, montant);
                 
                 if (tx != NULL) {
-                    finaliser_transaction_par_mineur(tx, src); //on maj les soldes et utxo
+                    finaliser_transaction_par_mineur(tx, src,&ma_liste_accounts); //on maj les soldes et utxo //nouveau parametre ajoute pour le T10
                     enfiler_mempool(tx);
                     tx_en_attente++;
                     
@@ -235,7 +235,7 @@ int main() {
                             bloc->nbTx++;
                             nb++;
                         }
-                        creer_tx_coinbase(ma_monnaie, bloc, mineur_acc->str);
+                        creer_tx_coinbase(ma_monnaie, bloc, mineur_acc); // mineur_acc->str remplace par mineur_acc apres le T9 de kasia (Zizu)
                         mine_block(bloc, ma_monnaie->bc->difficulty);
 
                         if (!ajouter_bloc_blockchain(ma_monnaie->bc, bloc, ma_monnaie->bc->difficulty)) {

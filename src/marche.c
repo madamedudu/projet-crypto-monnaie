@@ -191,16 +191,40 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, Account *miner) {
     
 }
 
+//Fonction auxiliaire Retrouve un compte dans le système à partir de son adresse Base58 
+Account* trouver_compte_par_adresse(ListeAccounts *liste, char *address) {
+    if (liste == NULL || address == NULL) return NULL;
+    for (int i = 0; i < liste->nb_accounts; i++) {
+        if (strcmp(liste->accounts[i].address, address) == 0) {
+            return &liste->accounts[i];
+        }
+    }
+    return NULL;
+}
+
 // ----------Finalise une transaction incomplète --------------------
-void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
-    if (tx == NULL) return;
+void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur, ListeAccounts *liste) {
+    if (tx == NULL || donneur == NULL || liste == NULL){
+         return;
+    }
+
+    //Modif T10 Signer la transaction avec : signer_transaction_ecdsa
+    char signature_hex[256] = {0}; 
+    if (signer_transaction_ecdsa(tx, donneur->priv_key, signature_hex) != 1) {
+        printf("[Mineur Error] Échec de la signature ECDSA.\n");
+        return;
+    }
+    // T10 Récupérer le compte avec la fonction auxiliaire trouver_compte_par_adresse ^^^
+    Account *receveur = trouver_compte_par_adresse(liste, (char*)tx->adReceiver);
 
     //Calcul du montant total des inputs+ le change
     long total_entree = 0;
     Slist *curr = tx->lstInputs;
     while (curr) {
         Utxo *u = (Utxo*)curr->info;
-        total_entree += u->txOut->amount;
+        if (u != NULL && u->txOut != NULL) {
+            total_entree += u->txOut->amount;
+        }
         curr = curr->next;
     }
 
@@ -208,7 +232,7 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
     long frais = (tx->txAmount * FEE_RATE) / 100;
     long monnaie_rendue = total_entree - tx->txAmount - frais;
 
-    // cree l'outpu
+    // cree l'output
     tx->timestamp = time(NULL);
 
 
@@ -216,40 +240,52 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
     sprintf(buffer, "%s%s%ld%ld", tx->adSender, tx->adReceiver, tx->txAmount, tx->timestamp);
     sha256ofString((BYTE *)buffer, (char*)tx->txid);
 
-    //signature pr transac
-    BYTE signature[HASHLENGTH];
-    signer_transaction_ecdsa(tx, donneur->priv_key, signature);
-
     //"modif chirine" suppr des utxo consommes
     curr = tx->lstInputs;
     while (curr) {
         Utxo *u = (Utxo*)curr->info;
-        supprimer_utxo((char*)u->hash, u->indexOutput);
+        if (u != NULL) {
+            supprimer_utxo((char*)u->hash, u->indexOutput);
+        }
         curr = curr->next;
     }
 
     tx->nbOutputs = 0;
     tx->lstOutputs = NULL;
-    //recepteur ->paienment
+
+    //recepteur ->paiement
     TxOutputs *out_dest = creer_output(tx->txAmount, (char*)tx->adReceiver, NULL);
     out_dest->outIndex = 0;
+    creer_lock_script(out_dest, "PLACEHOLDER", receveur ? (char*)receveur->pub_key : "CLE_INCONNUE"); //T10 lock script ajouté
     tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_dest);
     ajouter_utxo(out_dest, (char*)tx->txid, 0);
     tx->nbOutputs++;
 
-    //rendu dest
+    // rendu dest
     TxOutputs *out_frais = creer_output(frais, "FEES", NULL);
     out_frais->outIndex = 1;
+    creer_lock_script(out_frais, "FEES", "FEES"); //T10 lock script ajouté
     tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_frais);
     tx->nbOutputs++;
 
-    //change (genre la monnaie rendu)
+    // change (genre la monnaie rendu)
     if (monnaie_rendue > 0) {
-        TxOutputs *out_change = creer_output(monnaie_rendue, donneur->str, NULL);
+        TxOutputs *out_change = creer_output(monnaie_rendue, donneur->address, NULL);
         out_change->outIndex = 2;
+        creer_lock_script(out_change, "PLACEHOLDER", (char*)donneur->pub_key); //T10 lock script ajouté
         tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_change);
         ajouter_utxo(out_change, (char*)tx->txid, 2);
         tx->nbOutputs++;;
+    }
+
+    // T10 :  Construire l'unlock script pour chaque input
+    Slist *curr_input = tx->lstInputs;
+    while (curr_input != NULL) {
+        TxInputs *in = (TxInputs *)curr_input->info;
+        if (in != NULL) {
+            creer_unlock_script(in, (char*)donneur->address);
+        }
+        curr_input = curr_input->next;
     }
 }
 
@@ -325,7 +361,7 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
             Account *donneur = trouver_compte(la, (char*)tx_piochee->adSender);
             if (donneur != NULL) {
                 if (tx_piochee->txid[0] == '\0') {
-                    finaliser_transaction_par_mineur(tx_piochee, donneur); //si c'est tx aleatoire dans phase de marché
+                    finaliser_transaction_par_mineur(tx_piochee, donneur,la); //si c'est tx aleatoire dans phase de marché
                 }
                 //on ajoute directement au bloc temporaire
                 bloc_a_miner->transactions = inserer_en_tete(bloc_a_miner->transactions, tx_piochee);
