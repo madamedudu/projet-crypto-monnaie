@@ -19,4 +19,12 @@ int stack_pop(Stack *s, char *out);
 int stack_peek(Stack *s, char *out);
 int stack_is_empty(Stack *s);
 
+// Énumération et Op-codes
+typedef enum { OP_DUP, OP_EQ, OP_HASH, OP_VER } OpCode;
+int op_dup(Stack *s); 
+int op_eq(Stack *s); 
+int op_hash(Stack *s); 
+int op_ver(Stack *s, Transaction *tx); // Nécessite la structure Tx pour la vérification
+
 #endif
+
