@@ -47,6 +47,15 @@ void tester_scripts() {
     // Attendu : "HASH_CLE_PUB EQ VER"
     
     printf("====================================\n\n");
+
+    free(fausse_sortie.lockingScript[0]);
+    free(fausse_sortie.lockingScript[1]);
+    free(fausse_sortie.lockingScript[2]);
+    free(fausse_sortie.lockingScript[3]);
+
+    free(fausse_entree.unlockingScript[0]);
+    free(fausse_entree.unlockingScript[1]);
+    free(fausse_entree.unlockingScript[2]);
 }
 // Dans main() avant de lancer le marché pour brancher l'interruption CTRL C: signal(SIGINT, handle_sigint);
 
@@ -313,6 +322,13 @@ int main() {
                     liberer_blockchain(ma_monnaie->bc);
                     free(ma_monnaie);
                 }
+
+                if (ma_liste_accounts.accounts != NULL) {
+                    free(ma_liste_accounts.accounts);
+                    ma_liste_accounts.accounts = NULL;
+                    ma_liste_accounts.nb_accounts = 0;
+                }
+
                 printf("\nFermeture du programme.\n");
                 return 0;
         }

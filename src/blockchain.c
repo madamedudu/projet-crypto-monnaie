@@ -217,7 +217,49 @@ void liberer_blockchain(Blockchain *bc) {
         // Libérer toutes les transactions du bloc
         Slist *tx_courante = b->transactions;
         while (tx_courante != NULL) {
-            Transaction *tx = (Transaction *)tx_courante->info;            
+            Transaction *tx = (Transaction *)tx_courante->info;   
+            
+            // ---------- INPUTS ----------
+            Slist *input_courant = tx->lstInputs;
+
+            while(input_courant != NULL){
+
+                TxInputs *input = (TxInputs *)input_courant->info;
+
+                for(int i = 0 ; i < UNLOCK_SCRIPT_SIZE ; i++){
+                    if(input->unlockingScript[i] != NULL){
+                        free(input->unlockingScript[i]);
+                    }
+                }
+
+                free(input);
+
+                Slist *tmp_input = input_courant;
+                input_courant = input_courant->next;
+                free(tmp_input);
+            }
+
+            // ---------- OUTPUTS ----------
+            Slist *output_courant = tx->lstOutputs;
+
+            while(output_courant != NULL){
+
+                TxOutputs *output = (TxOutputs *)output_courant->info;
+
+                for(int i = 0 ; i < LOCK_SCRIPT_SIZE ; i++){
+                    if(output->lockingScript[i] != NULL){
+                        free(output->lockingScript[i]);
+                    }
+                }
+
+                free(output);
+
+                Slist *tmp_output = output_courant;
+                output_courant = output_courant->next;
+                free(tmp_output);
+            }
+
+
             // Libérer la transaction et son noeud
             free(tx);
             Slist *noeud_tx_a_supprimer = tx_courante;

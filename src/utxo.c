@@ -220,15 +220,7 @@ void vider_liste_utxo() {
         Utxo *utxo_a_supprimer = (Utxo *)courant->info;
  
         if (utxo_a_supprimer != NULL) {
-            //on libère d'abord le billet pointé par l'étiquette
-            if (utxo_a_supprimer->txOut != NULL) {
-                //on libère le nom (alloué par strdup)
-                if (utxo_a_supprimer->txOut->lockingScript[0] != NULL) {
-                    free(utxo_a_supprimer->txOut->lockingScript[0]);
-                }
-                free(utxo_a_supprimer->txOut);
-            }
-            //on libère ensuite l'étiquette elle-même
+            
             free(utxo_a_supprimer);
         }
  

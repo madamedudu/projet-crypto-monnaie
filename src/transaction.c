@@ -285,3 +285,11 @@ struct account * trouver_compte(ListeAccounts *liste, char *nom){
     return NULL;
 }
 
+void liberer_accounts(ListeAccounts *liste){
+    if(liste == NULL || liste->accounts == NULL) return;
+
+    free(liste->accounts);
+
+    liste->accounts = NULL;
+    liste->nb_accounts = 0;
+}
