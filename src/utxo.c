@@ -23,6 +23,9 @@ TxOutputs* creer_output(long montant, char *nom_destinataire, BYTE *pub_key) {
     nouveau_output->amount = montant;
     nouveau_output->outIndex = 0;
     nouveau_output->timestamp = (long)time(NULL);
+    for(int i = 0; i < LOCK_SCRIPT_SIZE; i++){
+        nouveau_output->lockingScript[i] = NULL;
+    }
  
     //on stocke le nom du proprio avec strdup (et on vérifie que ça marche)
     nouveau_output->lockingScript[0] = strdup(nom_destinataire);

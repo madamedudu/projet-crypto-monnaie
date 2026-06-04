@@ -118,7 +118,7 @@ int op_ver(Stack *s, Transaction *tx) {
         return 0;
     }
 
-    if (verifier_signature_ecdsa(tx, (BYTE *)pub_key_hex, signature_hex) == 1) { 
+    if (verifier_transaction_ecdsa(tx, (BYTE *)pub_key_hex, signature_hex) == 1) { 
         return stack_push(s, "TRUE");
     } else {
         return stack_push(s, "FALSE");
