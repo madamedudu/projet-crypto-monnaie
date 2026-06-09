@@ -9,8 +9,13 @@
 void afficher_accounts(ListeAccounts liste) {
     printf("----- LISTE DES COMPTES :-----\n");
     for (int i = 0; i < liste.nb_accounts; i++) {
-        long solde = calculer_solde_reel(&liste.accounts[i]); //calcul du solde reel des user lors d'une transaction 
-        printf("%s : %ld BTU\n", liste.accounts[i].str, solde);
+        long solde = calculer_solde_reel(&liste.accounts[i]); // calcul du solde reel du compte
+        printf("%2d) %-8s | adresse=%s | pub=%s... | solde=%ld BTU\n",
+               i + 1,
+               liste.accounts[i].str,
+               liste.accounts[i].address,
+               liste.accounts[i].pub_key,
+               solde);
     }
     printf("----------------------------------\n");
 }
@@ -36,6 +41,22 @@ void export_blockchain_json(ListeAccounts liste, Blockchain *blockchain, const c
     }
     fprintf(file, "\"Money supply\": %ld,\n", money); //vrai money calculée
 
+    fprintf(file, "\"accounts\":[\n");
+        for(int i = 0; i < liste.nb_accounts; i++) {
+            fprintf(file, "{\n");
+            fprintf(file, "\"name\":\"%s\",\n", liste.accounts[i].str);
+            fprintf(file, "\"address\":\"%s\",\n", liste.accounts[i].address);
+            fprintf(file, "\"balance\":%ld\n", calculer_solde_reel(&liste.accounts[i]));
+
+            if(i == liste.nb_accounts - 1){
+                fprintf(file, "}\n");
+            } else{
+                fprintf(file, "},\n");
+            }
+        }
+
+        fprintf(file, "],\n");
+
     //---------------------- BLOCKCHAIN -------------------------
     fprintf(file, "\"blockchain\": {\n");
     fprintf(file, "\"Difficulty\": %d,\n", blockchain->difficulty);
@@ -50,7 +71,6 @@ void export_blockchain_json(ListeAccounts liste, Blockchain *blockchain, const c
         while (BlocCourant != NULL) {
             Block *block = (Block*) BlocCourant->info;
 
-            // timestamp lisible
             char time_str[100];
             strftime(time_str, sizeof(time_str), "%a %b %d %H:%M:%S %Y", localtime(&block->timestamp));
 
@@ -85,16 +105,19 @@ void export_blockchain_json(ListeAccounts liste, Blockchain *blockchain, const c
 
                 Slist *in = tx->lstInputs;
                 while (in != NULL) {
-                    Utxo *input = (Utxo*) in->info;//liste contient des utxo
+
+                    Utxo *input = (Utxo*) in->info; //la liste contient bien des Utxo*
 
                     fprintf(file, "      {\n");
                     fprintf(file, "      \"txid\": \"%s\",\n", input->hash);
                     fprintf(file, "      \"index\": %d\n", input->indexOutput);
+                    fprintf(file, "      }");
 
-                    if (in->next == NULL)
-                        fprintf(file, "      }\n");
-                    else
-                        fprintf(file, "      },\n");
+                    if(in->next != NULL){
+                        fprintf(file, ",");
+                    }
+
+                    fprintf(file, "\n");
 
                     in = in->next;
                 }
@@ -114,13 +137,23 @@ void export_blockchain_json(ListeAccounts liste, Blockchain *blockchain, const c
                     fprintf(file, "      \"out index\": %d,\n", index);
                     fprintf(file, "      \"Catégorie\": \"transaction\",\n");
                     fprintf(file, "      \"Timestamp\": \"%s\",\n", tx_time);
-                    fprintf(file, "      \"lock\": \"%s\",\n", output->lockingScript[0]);
+
+                    fprintf(file, "      \"lockingScript\": [");
+                    for(int i=0; i< LOCK_SCRIPT_SIZE; i++){
+                        if(output->lockingScript[i] != NULL){
+                            fprintf(file, "\"%s\"", output->lockingScript[i]);
+
+                            if(i < LOCK_SCRIPT_SIZE -1 && output->lockingScript[i+1] != NULL){
+                                fprintf(file, ",");
+                            }
+                        }
+                    }
+                    fprintf(file, "],\n");
+
                     fprintf(file, "      \"Amount\": %ld\n", output->amount);
 
-                    if (out->next == NULL)
-                        fprintf(file, "      }\n");
-                    else
-                        fprintf(file, "      },\n");
+                    if (out->next == NULL) fprintf(file, "      }\n");
+                    else fprintf(file, "      },\n");
 
                     out = out->next;
                     index++;

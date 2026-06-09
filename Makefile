@@ -1,6 +1,8 @@
 # Compilateur et options de compilation
 CC = gcc
-CFLAGS = -Wall -Wextra -Iinclude
+CFLAGS = -Wall -Wno-deprecated-declarations -Wextra -Iinclude  -g
+LDFLAGS = -lcrypto -lssl
+
 
 # Dossiers du projet
 SRC_DIR = src
@@ -9,7 +11,7 @@ OBJ_DIR = obj
 
 # Nom de l'exécutable final
 EXEC = bitthune
-NOM_ETU = Rendu_Chirine_Maeva_Katarzyna_Zyad_Phase1
+NOM_ETU = Rendu_Chirine_Maeva_Katarzyna_Zyad_Phase3
 TEST_EXEC = testBlockchain
 
 # Liste des fichiers sources de la phase 1
@@ -22,7 +24,9 @@ SOURCES = $(SRC_DIR)/main.c \
           $(SRC_DIR)/sha256_utils.c\
 		  $(SRC_DIR)/utxo.c \
 		  $(SRC_DIR)/marche.c \
-		  $(SRC_DIR)/cryptographie.c 
+		  $(SRC_DIR)/cryptographie.c \
+		  $(SRC_DIR)/script.c \
+          $(SRC_DIR)/base58-code-decode.c
 
 # Liste des fichiers objets correspondants
 OBJECTS = $(OBJ_DIR)/main.o \
@@ -34,7 +38,9 @@ OBJECTS = $(OBJ_DIR)/main.o \
           $(OBJ_DIR)/sha256_utils.o \
           $(OBJ_DIR)/utxo.o \
           $(OBJ_DIR)/marche.o \
-		  $(OBJ_DIR)/cryptographie.o
+		  $(OBJ_DIR)/cryptographie.o \
+          $(OBJ_DIR)/script.o \
+          $(OBJ_DIR)/base58-code-decode.o
 
 # Liste des fichiers sources pour les tests (sans main.c)
 TEST_OBJECTS = $(OBJ_DIR)/blockchain.o \
@@ -49,7 +55,7 @@ all: $(EXEC)
 
 # Règle pour créer l'exécutable final en liant tous les .o
 $(EXEC): $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) -o $@
+	$(CC) $(CFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
 	@echo "Compilation terminée avec succès ! Lancez ./$(EXEC)"
 
 # Règle pour compiler et lancer les tests (ne lie PAS main.o)
@@ -76,10 +82,10 @@ deliver: clean # le clean permet d'eviter de rendre un fichier compilé
 	cp -r src $(NOM_ETU)
 	cp -r include $(NOM_ETU)
 	cp Makefile $(NOM_ETU)
-	cp README.txt $(NOM_ETU)
-	zip -r $(NOM_ETU).zip $(NOM_ETU)
+	cp README.md $(NOM_ETU)
+	tar -czf $(NOM_ETU).tar.gz $(NOM_ETU)
 	rm -rf $(NOM_ETU)
 	@echo " "
 	@echo "=================================================="
-	@echo "Vous devez maintenant déposer l'archive $(NOM_ETU).zip sur Moodle."
+	@echo "Vous devez maintenant déposer l'archive $(NOM_ETU).tar.gz sur Moodle."
 	@echo "=================================================="

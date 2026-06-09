@@ -2,12 +2,16 @@
 #define CRYPTOGRAPHIE_H
 
 #include "define.h"
+#include <stdint.h>
 
-void generer_cles(Account * compte );
-void signer_transaction(Transaction *transaction, BYTE *cle_privee, BYTE *signature);
-int verifier_signature(Transaction *transaction, BYTE *cle_privee, BYTE *signature);
-void creer_lock_script(TxOutputs *out, BYTE *cle_publique);
-void creer_unlock_script(TxInputs *input, BYTE *signature, BYTE *cle_publique);
-int executer_script(TxInputs* input, TxOutputs* output, Transaction* transaction);
+typedef unsigned char byte;
+
+void calc_address(char address[35], char *pub_key_char);
+void generer_cles(Account *compte);
+void creer_lock_script(TxOutputs *out, char *signature, char *pubkey);
+void creer_unlock_script(TxInputs *in,char * pubkey_hash);
+void script_to_string(char **script, int size, char *out, int out_size);
+int signer_transaction_ecdsa(Transaction *transaction, BYTE *cle_privee_hex, char *signature_hex);
+int verifier_transaction_ecdsa(Transaction *transaction, BYTE *cle_publique_hex, char *signature_hex);
 
 #endif

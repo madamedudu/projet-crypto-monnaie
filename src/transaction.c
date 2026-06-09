@@ -68,6 +68,13 @@ ListeAccounts generer_accounts(int nombre) {
     return liste;
 }
 
+//libere le tableau de comptes alloue par generer_accounts
+void liberer_accounts(ListeAccounts *liste) {
+    if (liste == NULL || liste->accounts == NULL) return;
+    free(liste->accounts);
+    liste->accounts = NULL;
+    liste->nb_accounts = 0;
+}
 
 
 
@@ -78,12 +85,17 @@ ListeAccounts generer_accounts(int nombre) {
  */
 
 //---------Modification Chirine---------
-Transaction* create_helicopter_transaction(char *dest_address) {
+//change des listes par accounts
+// modifs Kasia
+// la fct doit mtn accepter la clé publique du destinataire dest_pub_key
+// creer_output doit intégrer clé publique
+Transaction* create_helicopter_transaction(char *dest_address, BYTE *dest_pub_key) {
     Transaction *trans = malloc(sizeof(Transaction));
     memset(trans, 0, sizeof(Transaction));
+
     //sender : système (Coinbase)
-     strncpy((char*)trans->adSender, "SYSTEM_COINBASE", HASHLENGTH);
-    strncpy((char*)trans->adReceiver, dest_address, HASHLENGTH);
+    strncpy((char*)trans->adSender, "SYSTEM_COINBASE", ADDRESS_LEN);
+    strncpy((char*)trans->adReceiver, dest_address, ADDRESS_LEN);
     trans->txAmount = HELIREWARD; 
     trans->timestamp = time(NULL);
     strncpy(trans->comment, "Helicopter Money", MAX_STRING);
@@ -92,7 +104,8 @@ Transaction* create_helicopter_transaction(char *dest_address) {
     trans->lstInputs = NULL;
     trans->nbOutputs = 1;
     
-    TxOutputs *nouveau_output = creer_output(HELIREWARD, dest_address);
+    TxOutputs *nouveau_output = creer_output(HELIREWARD, dest_address, dest_pub_key);
+
     if (nouveau_output != NULL) {
         struct Slist *noeud = malloc(sizeof(struct Slist));
         noeud->info = (void *)nouveau_output;
@@ -101,6 +114,7 @@ Transaction* create_helicopter_transaction(char *dest_address) {
     }
 
     char buffer[MAX_BUF];
+    memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "%s%s%ld%ld", 
             (char*)trans->adSender, 
             (char*)trans->adReceiver, 
@@ -114,7 +128,8 @@ Transaction* create_helicopter_transaction(char *dest_address) {
 
 
 
-
+//modifs Kasia
+//passer la vraie adresse Base58 et la vraie clé publique du compte.
 void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
     if (liste == NULL || currency == NULL) return;
     printf(" Lancement : Helicopter Money (Phase 2 UTXO)\n");
@@ -123,8 +138,8 @@ void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
     for (int i = 0; i < liste->nb_accounts; i++) {
         
     
-        Transaction *h_trans = create_helicopter_transaction(liste->accounts[i].str);
-        
+        //T8: on utilise address et pub_key du compte
+        Transaction *h_trans = create_helicopter_transaction((char*)liste->accounts[i].address, liste->accounts[i].pub_key);        
         //on crée un bloc temporaire hors de la chaîne
         Block *bloc_a_miner = create_nouveau_bloc(currency->bc);
         if (bloc_a_miner == NULL) break;
@@ -141,7 +156,7 @@ void run_helicopter_money(ListeAccounts *liste, currency_t *currency) {
         
             //MAJ des compteurs pour l'affichage et la simulation
             liste->accounts[i].balance += h_trans->txAmount;
-            currency->moneySupply += h_trans->txAmount;
+            currency->moneySupply =  calculer_masse_monetaire();
             
             printf("[Coinbase] Output cree pour %s (TXID court: %.8s)\n", 
                    liste->accounts[i].str, (char*)h_trans->txid);
@@ -169,7 +184,7 @@ Transaction* create_incomplete_transaction(Account *compte_donneur, char *nom_re
     // On sélectionne les billets (Inputs) via le glouton
     long frais = (montant * FEE_RATE) / 100;
     long total_a_payer = montant + frais;
-    Slist *inputs_choisis = select_utxos_greedy(compte_donneur->str, total_a_payer, &accumule);
+    Slist *inputs_choisis = select_utxos_greedy(compte_donneur, total_a_payer, &accumule);
     
     if (inputs_choisis == NULL) {
         return NULL; // Fonds insuffisants
@@ -179,8 +194,8 @@ Transaction* create_incomplete_transaction(Account *compte_donneur, char *nom_re
     Transaction *tx = malloc(sizeof(Transaction));
     memset(tx, 0, sizeof(Transaction));
 
-    strncpy((char*)tx->adSender, compte_donneur->str, HASHLENGTH);
-    strncpy((char*)tx->adReceiver, nom_receveur, HASHLENGTH);
+    strncpy((char*)tx->adSender, (char*)compte_donneur->address, ADDRESS_LEN);
+    strncpy((char*)tx->adReceiver, nom_receveur, ADDRESS_LEN);
     tx->txAmount = montant;
     tx->lstInputs = inputs_choisis;
     
@@ -248,7 +263,7 @@ void generer_transaction_aleatoire(ListeAccounts *liste_comptes) {
     } while (idx_donneur == idx_receveur);
 
     Account *donneur = &liste_comptes->accounts[idx_donneur];
-    char *receveur = liste_comptes->accounts[idx_receveur].str;
+    char *receveur = (char*)liste_comptes->accounts[idx_receveur].address; //adresse du receveur pour la transaction
 
     //montant aléatoire
     long montant = (rand() % 100) + 1;
@@ -269,9 +284,39 @@ struct account * trouver_compte(ListeAccounts *liste, char *nom){
     if (liste==NULL || nom==NULL) {
         return NULL;
     }
-    //on va dans une boucle 
+    // on cherche par nom USER_X
     for (int i=0; i< liste->nb_accounts; i++) {
         if (strcmp(liste->accounts[i].str, nom) == 0) {
+            return &liste->accounts[i];
+        }
+    }
+    return NULL;
+}
+void vider_mempool() {
+    while (mempool != NULL) {
+        Slist *noeud = mempool;
+        Transaction *tx = (Transaction *)noeud->info;
+        if (tx != NULL) {
+            //ces tx sont incompletes : on libere les noeuds de lstInputs (pas les Utxo, ils sont au registre)
+            Slist *in = tx->lstInputs;
+            while (in != NULL) {
+                Slist *tmp = in;
+                in = in->next;
+                free(tmp);
+            }
+            free(tx);
+        }
+        mempool = mempool->next;
+        free(noeud);
+    }
+}
+// chercher un compte par adresse Base58
+struct account * trouver_compte_par_adresse(ListeAccounts *liste, char *address){
+    if (liste==NULL || address==NULL) {
+        return NULL;
+    }
+    for (int i = 0; i < liste->nb_accounts; i++) {
+        if (strcmp((char*)liste->accounts[i].address, address) == 0) {
             return &liste->accounts[i];
         }
     }
