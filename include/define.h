@@ -84,6 +84,7 @@ typedef struct transaction {
   int nbOutputs; // partie 2
   struct Slist * lstOutputs; // limité à trois sorties : la tx+reward+change (parties 2 et 3)
   char comment[MAX_STRING];
+  BYTE signature[512];
 } Transaction;
 
 typedef struct s_TxOutputs { //utxo (parties 2 et 3)

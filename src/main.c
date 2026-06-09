@@ -12,6 +12,7 @@
 #include "utxo.h" 
 #include "cryptographie.h"
 #include "marche.h" 
+#include "script.h"
 
 // Variable globale pour la pause (CTRL C)
 volatile sig_atomic_t pause_flag = 0;
@@ -19,10 +20,12 @@ void handle_sigint(int sig) {
     (void)sig;
     pause_flag = 1; // On lève le drapeau de pause
 }
+
+
 void tester_scripts() {
     printf("\n=== TEST DE CREATION DES SCRIPTS ===\n");
     
-    // 1. Préparation des variables factices
+    //réparation des variables fausses
     TxOutputs fausse_sortie;
     TxInputs fausse_entree;
     char buffer_affichage[256]; // Pour stocker la chaîne finale
@@ -82,7 +85,7 @@ int main() {
         printf("5. Lancer la phase de marché\n"); //phase dynamique Verifier la coherence de la blockchain
         printf("6. Afficher les utilisateurs\n");
         printf("7. Consulter registre utxo\n");
-        printf("8. Tester les scripts\n");
+        printf("8. Reconstituer le wallet d'une adresse\n");
         printf("9. Quitter\n");
         printf("================================================\n");
         
@@ -95,7 +98,7 @@ int main() {
                 while(getchar() != '\n'); 
                 printf("[Erreur] Veuillez entrer un chiffre entier.\n");
             } 
-            //gestion de l'erreur si le chiffre est hors limites (1 a 6)
+            //gestion de l'erreur si le chiffre est hors limites (1 a 9)
             else if (choix < 1 || choix > 9) {
                 printf("[Erreur] Veuillez entrer un chiffre entre 1 et 9.\n");
             } 
@@ -144,89 +147,91 @@ int main() {
                 break;
                 
 
-            case 3:
-                //transaction entre utilisateurs
-                printf("\n--- NOUVELLE TRANSACTION ---\n");
-                if (ma_monnaie == NULL || ma_liste_accounts.nb_accounts == 0|| helicopter_deja_lance == 0) {
-                    printf("[Erreur] Veuillez d'abord creer la blockchain et les utilisateurs (Option 1) et lancer l'hélicoptère money (Option 2).\n");
+            case 3: {
+                printf("\n--- NOUVELLE TRANSACTION INTERACTIVE ---\n");
+                if (ma_monnaie == NULL || ma_liste_accounts.nb_accounts == 0 || helicopter_deja_lance == 0) {
+                    printf("[Erreur] Initialisez l'option 1 et l'option 2 d'abord.\n");
                     break;
                 }
 
-                //affiche la liste des users
+                // 1. Affichage des utilisateurs disponibles
                 printf("\n-- Utilisateurs enregistres --\n");
                 for (int i = 0; i < ma_liste_accounts.nb_accounts; i++) {
-                    printf("- %s (Solde : %ld BT)\n", ma_liste_accounts.accounts[i].str, ma_liste_accounts.accounts[i].balance); //modification
+                    printf("%2d) %-8s | adresse=%s | pub=%.10s... | solde=%ld BTU\n",
+                           i + 1,
+                           ma_liste_accounts.accounts[i].str,
+                           ma_liste_accounts.accounts[i].address,
+                           ma_liste_accounts.accounts[i].pub_key,
+                           calculer_solde_reel(&ma_liste_accounts.accounts[i]));
                 }
                 printf("------------------------------\n");
 
-                char emetteur[MAX_STRING];
-                char beneficiaire[MAX_STRING];
+                // 2. Saisie des informations
+                char emetteur[ADDRESS_LEN], beneficiaire[ADDRESS_LEN], dest_address[ADDRESS_LEN];
                 long montant;
 
-                printf("Entrez le nom de l'emetteur : ");
-                scanf("%63s", emetteur);
+                printf("Entrez l'adresse ou l'index de l'emetteur : "); 
+                scanf("%34s", emetteur);
                 
-                printf("Entrez le nom du beneficiaire : ");
-                scanf("%63s", beneficiaire);
+                printf("Entrez l'adresse ou l'index du beneficiaire : "); 
+                scanf("%34s", beneficiaire);
                 
-                //a faire
                 printf("Entrez le montant UTXO : ");
-                if (scanf("%ld", &montant) != 1) {
+                if (scanf("%ld", &montant) != 1 || montant <= 0) {
                     while(getchar() != '\n');
-                    printf("Montant invalide.\n");
-                    break;
-                }
-                if (montant <= 0) {
-                    printf("Le montant doit etre strictement positif.\n");
+                    printf("[Erreur] Montant invalide.\n");
                     break;
                 }
 
+                // 3. Identification des comptes (par Index ou par Adresse)
+                struct account *src = NULL, *dst = NULL;
+                int idx_src = atoi(emetteur), idx_dst = atoi(beneficiaire);
 
+                // Traitement Emetteur
+                if (idx_src >= 1 && idx_src <= ma_liste_accounts.nb_accounts) src = &ma_liste_accounts.accounts[idx_src - 1];
+                else src = trouver_compte_par_adresse(&ma_liste_accounts, emetteur);
 
-                //on verifie si le nom de src et dst est dans la liste des utilisateurs
-                struct account *src= trouver_compte(&ma_liste_accounts, emetteur);
-                if(src==NULL){
-                    printf("L'émétteur entrée est erroné, veuillez refaire la transaction.\n");
+                // Traitement Beneficiaire
+                if (idx_dst >= 1 && idx_dst <= ma_liste_accounts.nb_accounts) dst = &ma_liste_accounts.accounts[idx_dst - 1];
+                else dst = trouver_compte_par_adresse(&ma_liste_accounts, beneficiaire);
+
+                if (src == NULL || dst == NULL) {
+                    printf("[Erreur] L'emetteur ou le beneficiaire est introuvable.\n");
                     break;
                 }
-                struct account *dst= trouver_compte(&ma_liste_accounts,beneficiaire);
-                if(dst==NULL){
-                    printf("Le bénéficiaire entrée est erroné, veuillez refaire la transaction.\n");
+
+                strncpy(dest_address, (char*)dst->address, ADDRESS_LEN);
+                dest_address[ADDRESS_LEN - 1] = '\0';
+
+                // 4. Verification de la faisabilite et creation
+                if (calculer_solde_reel(src) < montant) {
+                    printf("[Erreur] Montant insuffisant. Solde de %s : %ld BTU\n", src->str, src->balance);
                     break;
                 }
 
-
-                //test du montant
-                if (calculer_solde_reel(src)<montant) {
-                    printf("Le montant est insuffisant, solde de %s : %ld \n",src->str, src->balance);
-                    break;
-                }
-                
-                
-                //mise en place de la transaction  (similaire phase de marché mais cas unique)
-                Transaction *tx = create_incomplete_transaction(src, beneficiaire, montant);
-                
+                Transaction *tx = create_incomplete_transaction(src, dest_address, montant);
                 if (tx != NULL) {
-                    finaliser_transaction_par_mineur(tx, src); //on maj les soldes et utxo
+                    finaliser_transaction_par_mineur(tx, src, &ma_liste_accounts); //on signe et on ajoute les inputs manquants
                     enfiler_mempool(tx);
                     tx_en_attente++;
                     
-                    printf("[Succes] Transaction %s -> %s (%ld BTU) ajoutée au mempool (liste d'attente) (%d/%d).\n",emetteur, beneficiaire, montant, tx_en_attente, tx_max_bloc);
+                    printf("[Succes] Transaction %s -> %s (%ld BTU) ajoutée au mempool (%d/%d).\n",
+                           (char*)src->address, dest_address, montant, tx_en_attente, tx_max_bloc);
                     
-                    //si le mempool est plein, on mine automatiquement
+                    // 5. Minage automatique si mempool plein
                     if (tx_en_attente >= tx_max_bloc) {
                         printf("\n[Info] Mempool plein, minage automatique...\n");
-
                         int idx_mineur = rand() % ma_liste_accounts.nb_accounts;
                         Account *mineur_acc = &ma_liste_accounts.accounts[idx_mineur];
+                        
                         printf("[Info] Mineur tire au sort : %s\n", mineur_acc->str);
 
                         Block *bloc = create_nouveau_bloc(ma_monnaie->bc);
-                        if (bloc == NULL) { break; }
+                        if (bloc == NULL) break;
+                        
                         strncpy(bloc->minerName, mineur_acc->str, MAX_STRING);
                         strncpy(bloc->comment, "Bloc transactions manuelles", MAX_STRING);
 
-                        //dépiler et finaliser les transactions
                         int nb = 0;
                         while (nb < tx_max_bloc) {
                             Transaction *tx_piochee = defiler_mempool();
@@ -235,24 +240,25 @@ int main() {
                             bloc->nbTx++;
                             nb++;
                         }
-                        creer_tx_coinbase(ma_monnaie, bloc, mineur_acc->str);
+                        
+                        creer_tx_coinbase(ma_monnaie, bloc, mineur_acc);
                         mine_block(bloc, ma_monnaie->bc->difficulty);
 
                         if (!ajouter_bloc_blockchain(ma_monnaie->bc, bloc, ma_monnaie->bc->difficulty)) {
                             printf("[Erreur] Bloc rejeté.\n");
-                            free(bloc);
+                            liberer_bloc_rejete(bloc);
                         } else {
                             printf("[Succes] Bloc #%d miné avec %d transactions.\n", bloc->index, bloc->nbTx);
                         }
+                        
                         tx_en_attente = 0;
-                        tx_max_bloc=(rand() % (MAXTX - 1)) + 1; //pour le prochain bloc 
+                        tx_max_bloc = (rand() % (MAXTX - 1)) + 1; 
                     }
-
                 } else {
-                    printf("Probleme lors de la selection des UTXO.\n");
+                    printf("[Erreur] Probleme lors de la selection des UTXO (Fonds fragmentes ou script invalide).\n");
                 }
                 break;
-
+            }
 
             case 4:
                 printf("\n--- EXPORT JSON ---\n");
@@ -301,18 +307,67 @@ int main() {
                     afficher_utxo_global();
                 }
                 break;
-            
-            
+
             case 8:
-                tester_scripts();
+                printf("\n--- RECONSTITUTION DU WALLET ---\n");
+                if (ma_monnaie == NULL || ma_monnaie->bc == NULL) {
+                    printf("[Erreur] Veuillez d'abord creer la blockchain (Option 1).\n");
+                } else {
+                    printf("\n-- Adresses disponibles --\n");
+                    for (int i = 0; i < ma_liste_accounts.nb_accounts; i++) {
+                        printf("%2d) %-8s | adresse=%s | pub=%.10s...\n",
+                               i + 1,
+                               ma_liste_accounts.accounts[i].str,
+                               ma_liste_accounts.accounts[i].address,
+                               ma_liste_accounts.accounts[i].pub_key);
+                    }
+                    printf("------------------------------\n");
+
+                    char adresse[ADDRESS_LEN];
+                    printf("Adresse Base58 : ");
+                    scanf("%34s", adresse);
+
+                    Slist *wallet = reconstruire_wallet(ma_monnaie->bc, adresse);
+                    if (wallet == NULL) {
+                        printf("Aucun UTXO non depense pour cette adresse.\n");
+                    } else {
+                        printf("UTXO non depenses pour %s :\n", adresse);
+                        int count = 0;
+                        Slist *courant = wallet;
+                        while (courant != NULL) {
+                            Utxo *u = (Utxo *)courant->info;
+                            if (u != NULL && u->txOut != NULL) {
+                                printf("[%d] TXID %.16s... | index %d | montant %ld BTU\n",
+                                       count,
+                                       (char *)u->hash,
+                                       u->indexOutput,
+                                       u->txOut->amount);
+                                count++;
+                            }
+                            courant = courant->next;
+                        }
+                        printf("Total UTXO : %d\n", count);
+
+                        while (wallet != NULL) {
+                            Slist *tmp = wallet;
+                            free(tmp->info);
+                            wallet = wallet->next;
+                            free(tmp);
+                        }
+                    }
+                }
                 break;
+
+            
             case 9:
                 //netoyage de tout l'espace en memoire
-                vider_liste_utxo();
+                vider_mempool(); //libere les transactions encore dans le mempool
                 if (ma_monnaie != NULL) {
-                    liberer_blockchain(ma_monnaie->bc);
+                    liberer_blockchain(ma_monnaie->bc); //libere blocs, tx, outputs, lockingScript
                     free(ma_monnaie);
                 }
+                liberer_registre_utxo(); //libere les noeuds du registre (txOut deja liberes au dessus)
+                liberer_accounts(&ma_liste_accounts); //libere le tableau de comptes
                 printf("\nFermeture du programme.\n");
                 return 0;
         }

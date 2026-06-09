@@ -168,6 +168,7 @@ int signer_transaction_ecdsa(Transaction *transaction, BYTE *cle_privee_hex, cha
 
     //construction des données de transactions
     char memoire[512];
+    memset(memoire, 0, sizeof(memoire));
     sprintf(memoire, "%s%s%ld%ld", transaction->adSender, transaction->adReceiver, transaction->txAmount, transaction->timestamp);
 
     //hash 256
@@ -215,6 +216,7 @@ int verifier_transaction_ecdsa(Transaction *transaction, BYTE *cle_publique_hex,
     }
 
     char memoire[512];
+    memset(memoire, 0, sizeof(memoire));
     sprintf(memoire, "%s%s%ld%ld", transaction->adSender, transaction->adReceiver, transaction->txAmount, transaction->timestamp);
 
     //hash 256

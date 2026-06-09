@@ -3,7 +3,7 @@
 #include "define.h"
 #include "utxo.h"
 #include "transaction.h"
-
+#include "script.h"
 
 
 //voici la liste global
@@ -19,6 +19,7 @@ TxOutputs* creer_output(long montant, char *nom_destinataire, BYTE *pub_key) {
         printf("[Erreur] Allocation memoire echouee pour l'output.\n");
         return NULL;
     }
+    memset(nouveau_output, 0, sizeof(TxOutputs));
  
     nouveau_output->amount = montant;
     nouveau_output->outIndex = 0;
@@ -27,8 +28,16 @@ TxOutputs* creer_output(long montant, char *nom_destinataire, BYTE *pub_key) {
         nouveau_output->lockingScript[i] = NULL;
     }
  
-    //on stocke le nom du proprio avec strdup (et on vérifie que ça marche)
-    nouveau_output->lockingScript[0] = strdup(nom_destinataire);
+    if (pub_key != NULL) {
+        //lock script : <pubKey> DUP HASH (le DUP HASH donne H(pubkey) au sommet)
+        nouveau_output->lockingScript[0] = strdup((char*)pub_key);
+        nouveau_output->lockingScript[1] = strdup("DUP");
+        nouveau_output->lockingScript[2] = strdup("HASH");
+    } else {
+        //pas de cle (ex FEES) on met juste le nom
+        nouveau_output->lockingScript[0] = strdup(nom_destinataire);
+    }
+
     if (nouveau_output->lockingScript[0] == NULL) {
         printf("[Erreur] strdup echoue pour lockingScript.\n");
         free(nouveau_output);
@@ -137,9 +146,32 @@ void afficher_utxo_global() {
     printf("============================\n");
     printf("Total UTXO non depenses : %d\n\n", i);
 }
-
-// L'algorithme glouton
-Slist* select_utxos_greedy(char *nom_emetteur, long montant_cible, long *somme_recuperee) {
+//somme de tous les utxo non depenses = vraie masse monetaire en circulation
+long calculer_masse_monetaire() {
+    long total = 0;
+    struct Slist *courant = global_utxo_list;
+    while (courant != NULL) {
+        Utxo *u = (Utxo *)courant->info;
+        if (u != NULL && u->txOut != NULL) {
+            total += u->txOut->amount;
+        }
+        courant = courant->next;
+    }
+    return total;
+}
+void liberer_registre_utxo() {
+    struct Slist *courant = global_utxo_list;
+    while (courant != NULL) {
+        struct Slist *suivant = courant->next;
+        Utxo *u = (Utxo *)courant->info;
+        if (u != NULL) free(u); //on libere l'etiquette, pas u->txOut
+        free(courant);
+        courant = suivant;
+    }
+    global_utxo_list = NULL;
+}
+// L'algorithme glouton - on a changé le nom de l'emetteur en Account pour pouvoir utiliser sa clé publique dans le script
+Slist* select_utxos_greedy(Account *emetteur, long montant_cible, long *somme_recuperee) {
     if (global_utxo_list == NULL || montant_cible <= 0) return NULL;
 
     Utxo *best_greater = NULL;
@@ -147,11 +179,22 @@ Slist* select_utxos_greedy(char *nom_emetteur, long montant_cible, long *somme_r
     Slist *selection = NULL;
     *somme_recuperee = 0;
 
+    char *unlock_tmp[UNLOCK_SCRIPT_SIZE];
+    char hash_pubkey[65];
+    
+    // on hache la cle publique de l'emetteur
+    sha256ofString((BYTE *)emetteur->pub_key, hash_pubkey);
+    
+    // unlock : <H(pubKey)> EQ (pas de VER ici, juste pour savoir a qui appartient l'utxo)
+    unlock_tmp[0] = hash_pubkey;
+    unlock_tmp[1] = "EQ";
+    unlock_tmp[2] = NULL;
+
     // Chercher le "Smallest Greater" (un seul billet qui suffit)
     struct Slist *courant = global_utxo_list;
     while (courant != NULL) {
         Utxo *u = (Utxo *)courant->info;
-        if (u->txOut != NULL && strcmp(u->txOut->lockingScript[0], nom_emetteur) == 0) {
+        if (execute_script(u->txOut->lockingScript, LOCK_SCRIPT_SIZE, unlock_tmp, UNLOCK_SCRIPT_SIZE, NULL) == 1) {
             if (u->txOut->amount >= montant_cible) {
                 if (min_greater_val == -1 || u->txOut->amount < min_greater_val) {
                     min_greater_val = u->txOut->amount;
@@ -171,7 +214,7 @@ Slist* select_utxos_greedy(char *nom_emetteur, long montant_cible, long *somme_r
     courant = global_utxo_list;
     while (courant != NULL && *somme_recuperee < montant_cible) {
         Utxo *u = (Utxo *)courant->info;
-        if (u->txOut != NULL && strcmp(u->txOut->lockingScript[0], nom_emetteur) == 0) {
+        if (execute_script(u->txOut->lockingScript, LOCK_SCRIPT_SIZE, unlock_tmp, UNLOCK_SCRIPT_SIZE, NULL) == 1) {
             selection = inserer_en_tete(selection, u);
             *somme_recuperee += u->txOut->amount;
         }
@@ -194,12 +237,22 @@ Slist* select_utxos_greedy(char *nom_emetteur, long montant_cible, long *somme_r
 long calculer_solde_reel(struct account *acc) {
     if (acc == NULL) return 0;
     long total = 0;
-    struct Slist *curr = global_utxo_list; // ← parcourir la liste GLOBALE
+
+    char *unlock_tmp[UNLOCK_SCRIPT_SIZE];
+    char hash_pubkey[65];
+    sha256ofString((BYTE *)acc->pub_key, hash_pubkey);
+    unlock_tmp[0] = hash_pubkey;
+    unlock_tmp[1] = "EQ";
+    unlock_tmp[2] = NULL;
+
+    struct Slist *curr = global_utxo_list;
     while (curr != NULL) {
         Utxo *u = (Utxo *)curr->info;
-        if (u && u->txOut && u->txOut->lockingScript[0] &&
-            strcmp(u->txOut->lockingScript[0], acc->str) == 0) {
-            total += u->txOut->amount;
+        if (u && u->txOut && u->txOut->lockingScript[0]) {
+            if (execute_script(u->txOut->lockingScript, LOCK_SCRIPT_SIZE,
+                               unlock_tmp, UNLOCK_SCRIPT_SIZE, NULL) == 1) {
+                total += u->txOut->amount;
+            }
         }
         curr = curr->next;
     }

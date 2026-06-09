@@ -16,7 +16,9 @@ Slist* inserer_en_queue(Slist *liste, void *data);
 Transaction* create_incomplete_transaction(Account *compte_donneur, char *nom_receveur, long montant);
 void generer_transaction_aleatoire(ListeAccounts *liste_comptes);
 struct account * trouver_compte(ListeAccounts *liste, char *nom);
-
+struct account * trouver_compte_par_adresse(ListeAccounts *liste, char *address);
+void liberer_accounts(ListeAccounts *liste);
+void vider_mempool();
 extern struct Slist *mempool;
 Transaction* defiler_mempool();
 void enfiler_mempool(Transaction *tx);

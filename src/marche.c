@@ -168,6 +168,7 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, Account *miner) {
 
     // Calcul du TXID (Hash)
     char buffer[MAX_BUF];
+    memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "%s%s%ld%ld", tx_coinbase->adSender, tx_coinbase->adReceiver, montant_total, tx_coinbase->timestamp);
     sha256ofString((BYTE *)buffer, (char*)tx_coinbase->txid);
 
@@ -182,7 +183,7 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, Account *miner) {
     bloc->nbTx++;
 
     // 5. Faire moneySupply += Recompense (Point 11 - Ajouter uniquement le salaire créé, pas les frais )
-    currency->moneySupply += recompense;
+    currency->moneySupply = calculer_masse_monetaire();
 
     printf("=> TX Coinbase (1ere position) pour %s : %ld BTU (Recompense: %ld, Frais: %ld)\n", 
             miner->address, montant_total, recompense, frais);
@@ -192,7 +193,7 @@ void creer_tx_coinbase(currency_t *currency, Block *bloc, Account *miner) {
 }
 
 // ----------Finalise une transaction incomplète --------------------
-void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
+void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur,ListeAccounts *la) {
     if (tx == NULL) return;
 
     //Calcul du montant total des inputs+ le change
@@ -208,19 +209,20 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
     long frais = (tx->txAmount * FEE_RATE) / 100;
     long monnaie_rendue = total_entree - tx->txAmount - frais;
 
-    // cree l'outpu
     tx->timestamp = time(NULL);
 
-
     char buffer[MAX_BUF];
+    memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "%s%s%ld%ld", tx->adSender, tx->adReceiver, tx->txAmount, tx->timestamp);
     sha256ofString((BYTE *)buffer, (char*)tx->txid);
 
-    //signature pr transac
-    BYTE signature[HASHLENGTH];
-    signer_transaction_ecdsa(tx, donneur->priv_key, signature);
+    //on signe la tx et on stocke la signature dans la tx
+    signer_transaction_ecdsa(tx, donneur->priv_key, (char*)tx->signature);
 
-    //"modif chirine" suppr des utxo consommes
+    //on cherche le compte du destinataire pour recup sa pubkey
+    Account *receveur = trouver_compte_par_adresse(la, (char*)tx->adReceiver);
+
+    //suppr des utxo consommes
     curr = tx->lstInputs;
     while (curr) {
         Utxo *u = (Utxo*)curr->info;
@@ -230,26 +232,28 @@ void finaliser_transaction_par_mineur(Transaction *tx, Account *donneur) {
 
     tx->nbOutputs = 0;
     tx->lstOutputs = NULL;
-    //recepteur ->paienment
-    TxOutputs *out_dest = creer_output(tx->txAmount, (char*)tx->adReceiver, NULL);
+
+    //paiement au destinataire avec sa pubkey
+    BYTE *pub_dest = (receveur != NULL) ? receveur->pub_key : NULL;
+    TxOutputs *out_dest = creer_output(tx->txAmount, (char*)tx->adReceiver, pub_dest);
     out_dest->outIndex = 0;
     tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_dest);
     ajouter_utxo(out_dest, (char*)tx->txid, 0);
     tx->nbOutputs++;
 
-    //rendu dest
+    //frais
     TxOutputs *out_frais = creer_output(frais, "FEES", NULL);
     out_frais->outIndex = 1;
     tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_frais);
     tx->nbOutputs++;
 
-    //change (genre la monnaie rendu)
+    //change rendu au donneur avec sa pubkey
     if (monnaie_rendue > 0) {
-        TxOutputs *out_change = creer_output(monnaie_rendue, donneur->str, NULL);
+        TxOutputs *out_change = creer_output(monnaie_rendue, (char*)donneur->address, donneur->pub_key);
         out_change->outIndex = 2;
         tx->lstOutputs = inserer_en_queue(tx->lstOutputs, out_change);
         ajouter_utxo(out_change, (char*)tx->txid, 2);
-        tx->nbOutputs++;;
+        tx->nbOutputs++;
     }
 }
 
@@ -309,6 +313,7 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
             printf("[Erreur] Impossible de créer le bloc.\n");
             break;
         }
+        
         strncpy(bloc_a_miner->minerName, mineur->str, MAX_STRING);
         strncpy(bloc_a_miner->comment, "Bloc phase marche", MAX_STRING);
 
@@ -325,14 +330,19 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
             Account *donneur = trouver_compte(la, (char*)tx_piochee->adSender);
             if (donneur != NULL) {
                 if (tx_piochee->txid[0] == '\0') {
-                    finaliser_transaction_par_mineur(tx_piochee, donneur); //si c'est tx aleatoire dans phase de marché
+                    finaliser_transaction_par_mineur(tx_piochee, donneur, la); //si c'est tx aleatoire dans phase de marché
                 }
                 //on ajoute directement au bloc temporaire
                 bloc_a_miner->transactions = inserer_en_tete(bloc_a_miner->transactions, tx_piochee);
                 bloc_a_miner->nbTx++;
                 tx_ajoutees++;
             } else {
+                // NOUVEAU : libérer les noeuds lstInputs avant de jeter la transaction
+                Slist *in = tx_piochee->lstInputs;
+                while(in != NULL) { Slist *tmp = in; in = in->next; free(tmp); }
+                
                 free(tx_piochee); // donneur introuvable, on libère
+            
             }
         
         }
@@ -349,7 +359,7 @@ void lancer_phase_marche(Blockchain *bc, ListeAccounts *la, currency_t *curr_inf
         printf("Vérification de l'intégrité du bloc #%d...\n", bloc_a_miner->index);
         if (!ajouter_bloc_blockchain(bc, bloc_a_miner, bc->difficulty)) {
             printf("[Erreur] Bloc #%d rejeté.\n", bloc_a_miner->index);
-            free(bloc_a_miner);
+            liberer_bloc_rejete(bloc_a_miner);
         } else {
             printf("Cycle terminé | Blocs : %d | Masse : %ld BTU\n",bc->nbBlocks, curr_info->moneySupply);
         }
