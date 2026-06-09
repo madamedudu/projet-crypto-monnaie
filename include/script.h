@@ -25,6 +25,7 @@ int op_dup(Stack *s);
 int op_eq(Stack *s); 
 int op_hash(Stack *s); 
 int op_ver(Stack *s, Transaction *tx); // Nécessite la structure Tx pour la vérification
+int execute_script(char **lock, int lock_size, char **unlock, int unlock_size,Transaction *tx);
 
 #endif
 

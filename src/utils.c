@@ -9,8 +9,13 @@
 void afficher_accounts(ListeAccounts liste) {
     printf("----- LISTE DES COMPTES :-----\n");
     for (int i = 0; i < liste.nb_accounts; i++) {
-        long solde = calculer_solde_reel(&liste.accounts[i]); //calcul du solde reel des user lors d'une transaction 
-        printf("%s : %ld BTU\n", liste.accounts[i].str, solde);
+        long solde = calculer_solde_reel(&liste.accounts[i]); // calcul du solde reel du compte
+        printf("%2d) %-8s | adresse=%s | pub=%s... | solde=%ld BTU\n",
+               i + 1,
+               liste.accounts[i].str,
+               liste.accounts[i].address,
+               liste.accounts[i].pub_key,
+               solde);
     }
     printf("----------------------------------\n");
 }
@@ -101,22 +106,11 @@ void export_blockchain_json(ListeAccounts liste, Blockchain *blockchain, const c
                 Slist *in = tx->lstInputs;
                 while (in != NULL) {
 
-                    TxInputs *input = (TxInputs*) in->info;//liste contient des utxo
+                    Utxo *input = (Utxo*) in->info; //la liste contient bien des Utxo*
 
                     fprintf(file, "      {\n");
-                    fprintf(file, "      \"txid\": \"%s\",\n", input->txHash);
-                    fprintf(file, "      \"index\": %d,\n", input->indexOutput);
-
-                    fprintf(file, "      \"unlockingScript\": [");
-                    for(int i = 0; i < UNLOCK_SCRIPT_SIZE; i++){
-                        if(input->unlockingScript[i] != NULL){
-                            fprintf(file, "\"%s\"", input->unlockingScript[i]);
-                            if(i < UNLOCK_SCRIPT_SIZE - 1 && input->unlockingScript[i+1] != NULL){
-                                fprintf(file, ", ");
-                            }
-                        }
-                    }
-                    fprintf(file, "]\n");
+                    fprintf(file, "      \"txid\": \"%s\",\n", input->hash);
+                    fprintf(file, "      \"index\": %d\n", input->indexOutput);
                     fprintf(file, "      }");
 
                     if(in->next != NULL){

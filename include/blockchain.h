@@ -12,5 +12,8 @@ int verification_preuve_travail(Block *bloc,int difficulte);
 int verification_hash_bloc(Block *bloc);
 int ajouter_bloc_blockchain(Blockchain *bc, Block *nouveau_bloc, int difficulte);
 void liberer_blockchain(Blockchain *bc);
+void liberer_bloc_rejete(Block *b);
+Slist* reconstruire_wallet(Blockchain *bc, char *address);
+int utxo_est_depense(Blockchain *bc, char *txid, int outIndex);
 
 #endif

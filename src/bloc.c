@@ -126,7 +126,7 @@ Block * create_genesis_block(){
         perror("allocation du block");
         return NULL;
     }
-
+    memset(genesis, 0, sizeof(Block));
     //--- initialisation du hash a 0 car c'est le bloc genesis (format hexadécimal) ---
     //memset(adresse, valeur, taille) on force la 'valeur' a l'@ 'adresse' de taille 'taille'
     /* a la place de memset on peut faire la boucle, mais c'est plus longue
@@ -142,8 +142,9 @@ Block * create_genesis_block(){
     genesis->merkleTree[HASHLENGTH - 1] = '\0';
 
     //--- initialisation des autres parametres ---
-    genesis->timestamp = time(NULL); //renvoi le temps en secondes
     genesis->nbTx = 0; //nbr des transactions
+    genesis->timestamp = time(NULL); //renvoi le temps en secondes
+    
     genesis->transactions = NULL; //liste de transactions
     genesis->nonce = 0;
     
